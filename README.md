@@ -442,15 +442,10 @@ SOFTWARE.
 
 ## 📈 Project Stats
 
-![GitHub stars](https://img.shields.io/github/stars/yourusername/eda-pro?style=social)
-![GitHub forks](https://img.shields.io/github/forks/yourusername/eda-pro?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/yourusername/eda-pro?style=social)
-
 ---
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/eda-pro&type=Date)](https://star-history.com/#yourusername/eda-pro&Date)
 
 ---
 
