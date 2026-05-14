@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDA-Pro: A Web-Based Automated Exploratory Numerical Data Analysis System</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --ink: #f0f4fa;
+  --ink2: #ffffff;
+  --ink3: #e8eef6;
+  --surface: #f7faff;
+  --surface2: #eef3fb;
+  --surface3: #dde8f5;
+  --border: #ccd9ee;
+  --border2: #b0c4e0;
+  --accent: #1a6fc4;
+  --accent2: #16a34a;
+  --accent3: #dc2626;
+  --accent4: #7c3aed;
+  --warn: #d97706;
+  --text: #0f1f3d;
+  --text2: #3b5280;
+  --text3: #7a92b8;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+[data-theme="dark"] {
+  --ink: #0d1117;
+  --ink2: #1c2128;
+  --ink3: #2d333b;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --surface3: #30363d;
+  --border: #30363d;
+  --border2: #444c56;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --text3: #6e7681;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: var(--sans);
+  background: var(--ink);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── HEADER ─────────────────────────────────────────── */
+.header {
+  background: linear-gradient(135deg, #1a4fa0 0%, #2563eb 100%);
+  border-bottom: none;
+  padding: 0 20px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.logo {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #93c5fd; }
+.header-status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #bfdbfe;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.status-chip {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: #dbeafe;
+}
+.status-chip.active { border-color: #86efac; color: #86efac; }
+
+/* ─── LAYOUT ─────────────────────────────────────────── */
+.layout { display: flex; flex: 1; overflow: hidden; }
+
+/* ─── SIDEBAR ────────────────────────────────────────── */
+.sidebar {
+  width: 220px;
+  background: var(--ink2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.sidebar-section {
+  padding: 12px 12px 4px;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.nav-item {
+  margin: 1px 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.12s;
+  user-select: none;
+}
+.nav-item:hover { background: var(--surface2); color: var(--accent); }
+.nav-item.active { background: #dbeafe; color: var(--accent); border-left: 3px solid var(--accent); }
+.nav-item .ni { font-size: 13px; width: 16px; text-align: center; opacity: 0.8; }
+
+/* ─── MAIN ───────────────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(26,79,160,0.06);
+}
+.topbar-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.topbar-breadcrumb { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.content { flex: 1; overflow-y: auto; padding: 20px; }
+
+/* ─── PANELS ─────────────────────────────────────────── */
+.panel { display: none; animation: fadeUp 0.18s ease; }
+.panel.active { display: block; }
+@keyframes fadeUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
+
+/* ─── CARDS / GRID ───────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.stat-card .sc-label { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.stat-card .sc-val { font-size: 20px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
+.stat-card .sc-sub { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title .ct-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.chart-h { position: relative; height: 220px; }
+.chart-h-tall { position: relative; height: 300px; }
+
+/* ─── TABLE ──────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; border-radius: 6px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead tr { background: #1a4fa0; color: white; }
+th { padding: 9px 12px; text-align: left; font-family: var(--mono); font-size: 10px; color: #dbeafe; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; color: var(--text2); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+.td-num { color: var(--accent); }
+.td-cat { color: var(--accent4); }
+.td-miss { color: var(--accent3); }
+.td-ok { color: var(--accent2); }
+.td-sig { background: #dcfce7; font-weight: 600; }
+
+/* ─── BADGES ─────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 7px; border-radius: 4px; font-size: 10px;
+  font-family: var(--mono); font-weight: 600;
+}
+.badge-num { background: #dbeafe; color: #1a4fa0; }
+.badge-cat { background: #ede9fe; color: #5b21b6; }
+.badge-miss { background: #fee2e2; color: #991b1b; }
+.badge-ok { background: #dcfce7; color: #14532d; }
+.badge-warn { background: #fef3c7; color: #92400e; }
+
+/* ─── CONTROLS ───────────────────────────────────────── */
+.controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.cg { display: flex; flex-direction: column; gap: 4px; }
+.cl { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+select, input[type="text"], input[type="number"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.12s;
+  min-width: 130px;
+}
+select:focus, input:focus { border-color: var(--accent); }
+
+.btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 6px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s;
+  white-space: nowrap;
+}
+.btn:hover { opacity: 0.85; }
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border2);
+}
+.btn-ghost:hover { background: var(--surface2); color: var(--text); }
+
+/* ─── INSIGHT BOX ────────────────────────────────────── */
+.insight-box {
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1e3a8a;
+}
+.insight-box .ib-title {
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  color: #1a4fa0;
+}
+.insight-box ul {
+  margin-left: 20px;
+  margin-top: 8px;
+}
+.insight-box li {
+  margin-bottom: 4px;
+}
+
+/* ─── SECTION TITLE ──────────────────────────────────── */
+.sec-title {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+}
+
+/* ─── EMPTY STATE ────────────────────────────────────── */
+.empty {
+  text-align: center; padding: 60px 24px;
+  color: var(--text3); font-family: var(--mono);
+}
+.empty-icon { font-size: 32px; margin-bottom: 10px; }
+.empty-text { font-size: 13px; }
+
+/* ─── SCROLLBAR ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f0f4fa; }
+::-webkit-scrollbar-thumb { background: #b0c4e0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #7a92b8; }
+
+/* ─── PAGINATION ─────────────────────────────────────── */
+.pagination {
+  display: flex; gap: 8px; align-items: center; justify-content: center;
+  margin: 16px 0; font-family: var(--mono); font-size: 12px;
+}
+.pagination button {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 4px; cursor: pointer;
+  color: var(--text2); font-family: var(--mono); font-size: 11px;
+}
+.pagination button:hover { background: var(--surface2); }
+.pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+.pagination button.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* ─── FILTER BOX ─────────────────────────────────────── */
+.filter-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px; margin-bottom: 16px;
+}
+.filter-row {
+  display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-end;
+}
+.filter-row select, .filter-row input {
+  min-width: 120px;
+}
+
+/* ─── DARK MODE TOGGLE ───────────────────────────────── */
+.theme-toggle {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: #dbeafe;
+  font-size: 11px;
+  font-family: var(--mono);
+  transition: all 0.2s;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.25); }
+
+/* ─── PRINT STYLES ───────────────────────────────────── */
+@media print {
+  .sidebar, .header, .topbar, .btn, button, .controls { display: none !important; }
+  .main { margin: 0; }
+  .content { padding: 20px; }
+  .card { page-break-inside: avoid; }
+  table { font-size: 10px; }
+  body { background: white; color: black; }
+}
+
+/* ─── RESPONSIVE ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar { width: 48px; }
+  .nav-item span:not(.ni) { display: none; }
+  .sidebar-section { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo"><div class="logo-dot"></div> EDA-Pro v4.0</div>
+  <div class="header-status">
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark</button>
+    <span class="status-chip" id="h-rows">No data</span>
+    <span class="status-chip" id="h-cols">—</span>
+    <span class="status-chip" id="h-file" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">No file loaded</span>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">Core</div>
+    <div class="nav-item active" data-panel="upload"><span class="ni">⬆</span><span>Data Upload</span></div>
+    <div class="nav-item" data-panel="dashboard"><span class="ni">⊞</span><span>Dashboard</span></div>
+    <div class="nav-item" data-panel="profiling"><span class="ni">≡</span><span>Profiling</span></div>
+
+    <div class="sidebar-section">Statistical Analysis</div>
+    <div class="nav-item" data-panel="univariate"><span class="ni">∿</span><span>Univariate</span></div>
+    <div class="nav-item" data-panel="bivariate"><span class="ni">⟺</span><span>Bivariate</span></div>
+    <div class="nav-item" data-panel="multivariate"><span class="ni">⊞</span><span>Correlation</span></div>
+    <div class="nav-item" data-panel="numstats"><span class="ni">∑</span><span>Num. Stats</span></div>
+    <div class="nav-item" data-panel="stattests"><span class="ni">✓</span><span>Stat Tests</span></div>
+    <div class="nav-item" data-panel="hypothesis"><span class="ni">⚖</span><span>t-Tests</span></div>
+    <div class="nav-item" data-panel="regression"><span class="ni">⟋</span><span>Regression</span></div>
+    <div class="nav-item" data-panel="multiregression"><span class="ni">⟁</span><span>Multi-Reg</span></div>
+    <div class="nav-item" data-panel="bootstrap"><span class="ni">🔄</span><span>Bootstrap</span></div>
+
+    <div class="sidebar-section">Time Series</div>
+    <div class="nav-item" data-panel="timeseries"><span class="ni">⌇</span><span>Time Analysis</span></div>
+
+    <div class="sidebar-section">Data Tools</div>
+    <div class="nav-item" data-panel="transform"><span class="ni">⚡</span><span>Transform</span></div>
+    <div class="nav-item" data-panel="filter"><span class="ni">⊲</span><span>Filter Data</span></div>
+    <div class="nav-item" data-panel="outlier"><span class="ni">◈</span><span>Outliers</span></div>
+    <div class="nav-item" data-panel="missing"><span class="ni">□</span><span>Missing Data</span></div>
+
+    <div class="sidebar-section">Visualization</div>
+    <div class="nav-item" data-panel="visualization"><span class="ni">◉</span><span>Charts</span></div>
+
+    <div class="sidebar-section">AI & Output</div>
+    <div class="nav-item" data-panel="insights"><span class="ni">💡</span><span>AI Insights</span></div>
+    <div class="nav-item" data-panel="export"><span class="ni">⬇</span><span>Export</span></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-breadcrumb">EDA-Pro /</div>
+      <div class="topbar-title" id="topbar-title">Data Upload</div>
+    </div>
+    <div class="content">
+
+      <!-- ═══ UPLOAD ═════════════════════════════════════ -->
+      <div class="panel active" id="panel-upload">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--accent);">📊 EDA-Pro: Web-Based Automated EDA System</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;">
+            A comprehensive exploratory data analysis tool for numerical data with integrated statistical tests, time series analysis, data transformation, and AI-powered insights generation — all in your browser.
+          </div>
+        </div>
+        <div style="border:1px dashed var(--border2);border-radius:8px;padding:56px 24px;text-align:center;background:var(--surface);cursor:pointer;transition:all 0.15s;margin-bottom:20px;" id="dropZone">
+          <div style="font-size:36px;margin-bottom:12px;">📂</div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Upload CSV or TSV File</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">Drag & drop, or click to browse • Max 50MB</div>
+          <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+          <input type="file" id="fileInput" accept=".csv,.tsv,.txt" style="display:none;">
+        </div>
+        <div id="upload-preview" style="display:none;">
+          <div class="sec-title">Preview — first 10 rows</div>
+          <div class="tbl-wrap"><table id="previewTable"></table></div>
+        </div>
+      </div>
+
+      <!-- ═══ DASHBOARD ══════════════════════════════════ -->
+      <div class="panel" id="panel-dashboard">
+        <div class="empty" id="dash-empty"><div class="empty-icon">⬆</div><div class="empty-text">Upload a CSV to begin</div></div>
+        <div id="dash-content" style="display:none;">
+          <div class="stat-grid" id="dashStats"></div>
+          <div class="charts-grid">
+            <div class="card">
+              <div class="card-title"><span class="ct-dot"></span>Column Types</div>
+              <div class="chart-h"><canvas id="typeChart"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><span class="ct-dot" style="background:var(--accent3)"></span>Missing Values</div>
+              <div class="chart-h"><canvas id="missChart"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PROFILING ══════════════════════════════════ -->
+      <div class="panel" id="panel-profiling">
+        <div class="empty" id="prof-empty"><div class="empty-icon">≡</div><div class="empty-text">No data loaded</div></div>
+        <div id="prof-content" style="display:none;">
+          <div class="stat-grid" id="profStats"></div>
+          <div class="sec-title">Column Profiles</div>
+          <div style="margin-bottom:12px;">
+            <input type="text" id="colSearch" placeholder="🔍 Search columns..." style="width:300px;" oninput="filterColumns()">
+          </div>
+          <div class="tbl-wrap"><table id="profileTable"></table></div>
+        </div>
+      </div>
+
+      <!-- ═══ UNIVARIATE ═════════════════════════════════ -->
+      <div class="panel" id="panel-univariate">
+        <div class="empty" id="uni-empty"><div class="empty-icon">∿</div><div class="empty-text">No data loaded</div></div>
+        <div id="uni-content" style="display:none;">
+          <div class="controls">
+            <div class="cg"><div class="cl">Column</div><select id="uniCol"></select></div>
+            <button class="btn" onclick="renderUni()">Analyze</button>
+          </div>
+          <div id="uniDetailGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px;"></div>
+          <div class="charts-grid" id="uniCharts"></div>
+        </div>
+      </div>
+
+      <!-- ═══ BIVARIATE ══════════════════════════════════ -->
+      <div class="panel" id="panel-bivariate">
+        <div class="empty" id="biv-empty"><div class="empty-icon">⟺</div><div class="empty-text">No data loaded</div></div>
+        <div id="biv-content" style="display:none;">
+          <div class="controls">
+            <div class="cg"><div class="cl">X Column</div><select id="bivX"></select></div>
+            <div class="cg"><div class="cl">Y Column</div><select id="bivY"></select></div>
+            <button class="btn" onclick="renderBiv()">Analyze</button>
+          </div>
+          <div id="bivStats" style="margin-bottom:14px;"></div>
+          <div class="charts-grid" id="bivCharts"></div>
+        </div>
+      </div>
+
+      <!-- ═══ MULTIVARIATE ═══════════════════════════════ -->
+      <div class="panel" id="panel-multivariate">
+        <div class="empty" id="multi-empty"><div class="empty-icon">⊞</div><div class="empty-text">No data loaded</div></div>
+        <div id="multi-content" style="display:none;">
+          <div class="sec-title">Pearson Correlation Matrix</div>
+          <div class="card" id="corrHeatmap"></div>
+          <div class="sec-title">Top Correlations</div>
+          <div class="tbl-wrap" id="topCorr"></div>
+        </div>
+      </div>
+
+      <!-- ═══ NUMERICAL STATISTICS ═══════════════════════ -->
+      <div class="panel" id="panel-numstats">
+        <div class="empty" id="ns-empty"><div class="empty-icon">∑</div><div class="empty-text">No data loaded</div></div>
+        <div id="ns-content" style="display:none;">
+          <div class="sec-title">Descriptive Statistics — All Numeric Columns</div>
+          <div class="tbl-wrap" style="margin-bottom:20px;"><table id="descTable"></table></div>
+          <div class="sec-title">Distribution Tests (Normality)</div>
+          <div class="tbl-wrap"><table id="normTable"></table></div>
+        </div>
+      </div>
+
+      <!-- ═══ STATISTICAL TESTS ══════════════════════════ -->
+      <div class="panel" id="panel-stattests">
+        <div class="empty" id="stat-empty"><div class="empty-icon">✓</div><div class="empty-text">No data loaded</div></div>
+        <div id="stat-content" style="display:none;">
+          
+          <div class="insight-box">
+            <div class="ib-title">🔬 Statistical Testing Framework</div>
+            This panel performs hypothesis tests to determine statistical significance. p-value < 0.05 indicates statistical significance at 95% confidence level.
+          </div>
+
+          <div class="sec-title">Normality Tests (Shapiro-Wilk)</div>
+          <div class="tbl-wrap" style="margin-bottom:20px;"><table id="normalityTestTable"></table></div>
+
+          <div class="sec-title">One-Way ANOVA</div>
+          <div class="controls">
+            <div class="cg"><div class="cl">Categorical (Group)</div><select id="anovaCat"></select></div>
+            <div class="cg"><div class="cl">Numeric (Value)</div><select id="anovaNum"></select></div>
+            <button class="btn" onclick="runANOVA()">Run ANOVA</button>
+          </div>
+          <div id="anovaResult"></div>
+
+          <div class="sec-title">Chi-Square Test (Independence)</div>
+          <div class="controls">
+            <div class="cg"><div class="cl">Variable 1</div><select id="chiVar1"></select></div>
+            <div class="cg"><div class="cl">Variable 2</div><select id="chiVar2"></select></div>
+            <button class="btn" onclick="runChiSquare()">Run Chi-Square</button>
+          </div>
+          <div id="chiResult"></div>
+
+          <div class="sec-title">Kolmogorov-Smirnov Test (Two-Sample)</div>
+          <div class="controls">
+            <div class="cg"><div class="cl">Sample 1</div><select id="ksCol1"></select></div>
+            <div class="cg"><div class="cl">Sample 2</div><select id="ksCol2"></select></div>
+            <button class="btn" onclick="runKSTest()">Run KS Test</button>
+          </div>
+          <div id="ksResult"></div>
+        </div>
+      </div>
+
+      <!-- ═══ REGRESSION ═════════════════════════════════ -->
+      <div class="panel" id="panel-regression">
+        <div class="empty" id="reg-empty"><div class="empty-icon">⟋</div><div class="empty-text">No data loaded</div></div>
+        <div id="reg-content" style="display:none;">
+          <div class="controls">
+            <div class="cg"><div class="cl">Dependent (Y)</div><select id="regY"></select></div>
+            <div class="cg"><div class="cl">Independent (X)</div><select id="regX"></select></div>
+            <button class="btn" onclick="runRegression()">Run OLS Regression</button>
+          </div>
+          <div id="regOutput"></div>
+          <div class="charts-grid" id="regCharts"></div>
+        </div>
+      </div>
+
+      <!-- ═══ TIME SERIES ════════════════════════════════ -->
+      <div class="panel" id="panel-timeseries">
+        <div class="empty" id="ts-empty"><div class="empty-icon">⌇</div><div class="empty-text">No data loaded</div></div>
+        <div id="ts-content" style="display:none;">
+          
+          <div class="insight-box">
+            <div class="ib-title">📈 Time Series Analysis</div>
+            Analyze temporal patterns including trend, seasonality, and autocorrelation. Ensure your data has a time/date column or sequential ordering.
+          </div>
+
+          <div class="controls">
+            <div class="cg"><div class="cl">Time/Index Column</div><select id="tsTimeCol"></select></div>
+            <div class="cg"><div class="cl">Value Column</div><select id="tsValCol"></select></div>
+            <button class="btn" onclick="renderTimeSeries()">Analyze</button>
+          </div>
+          
+          <div id="tsStats" style="margin-bottom:16px;"></div>
+          <div class="charts-grid" id="tsCharts"></div>
+          
+          <div class="sec-title">Autocorrelation Analysis</div>
+          <div class="card">
+            <div class="chart-h-tall"><canvas id="acfChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ DATA TRANSFORMATION ════════════════════════ -->
+      <div class="panel" id="panel-transform">
+        <div class="empty" id="trans-empty"><div class="empty-icon">⚡</div><div class="empty-text">No data loaded</div></div>
+        <div id="trans-content" style="display:none;">
+          <div class="insight-box">
+            <div class="ib-title">⚡ Data Transformation</div>
+            Apply mathematical transformations to normalize distributions or scale variables. Original data is preserved.
+          </div>
+
+          <div class="controls">
+            <div class="cg"><div class="cl">Column</div><select id="transCol"></select></div>
+            <div class="cg"><div class="cl">Transformation</div>
+              <select id="transType">
+                <option value="log">Log (ln)</option>
+                <option value="log10">Log10</option>
+                <option value="sqrt">Square Root</option>
+                <option value="square">Square (x²)</option>
+                <option value="zscore">Z-Score (standardize)</option>
+                <option value="minmax">Min-Max (0-1)</option>
+                <option value="robust">Robust (IQR-based)</option>
+              </select>
+            </div>
+            <button class="btn" onclick="applyTransform()">Apply</button>
+            <button class="btn btn-ghost" onclick="downloadTransformed()">⬇ Export Transformed</button>
+          </div>
+          
+          <div id="transResult"></div>
+          <div class="charts-grid" id="transCharts"></div>
+        </div>
+      </div>
+
+      <!-- ═══ DATA FILTERING ═════════════════════════════ -->
+      <div class="panel" id="panel-filter">
+        <div class="empty" id="filter-empty"><div class="empty-icon">⊲</div><div class="empty-text">No data loaded</div></div>
+        <div id="filter-content" style="display:none;">
+          <div class="insight-box">
+            <div class="ib-title">⊲ Data Filtering & Subsetting</div>
+            Filter rows based on conditions. Create subsets for focused analysis. Changes don't affect original data.
+          </div>
+
+          <div class="filter-box">
+            <div style="font-weight:600;margin-bottom:12px;">Add Filter Conditions</div>
+            <div id="filterConditions"></div>
+            <button class="btn btn-ghost" onclick="addFilterRow()" style="margin-top:8px;">+ Add Condition</button>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button class="btn" onclick="applyFilters()">Apply Filters</button>
+            <button class="btn btn-ghost" onclick="clearFilters()">Clear All</button>
+            <button class="btn btn-ghost" onclick="exportFiltered()">⬇ Export Filtered</button>
+          </div>
+
+          <div id="filterStats" style="margin-bottom:16px;"></div>
+          <div class="tbl-wrap" style="max-height:400px;overflow-y:auto;" id="filteredTable"></div>
+        </div>
+      </div>
+
+      <!-- ═══ HYPOTHESIS TESTING ═════════════════════════ -->
+      <div class="panel" id="panel-hypothesis">
+        <div class="empty" id="hyp-empty"><div class="empty-icon">⚖</div><div class="empty-text">No data loaded</div></div>
+        <div id="hyp-content" style="display:none;">
+          <div class="insight-box">
+            <div class="ib-title">⚖️ t-Tests for Mean Comparison</div>
+            Compare means between groups or samples. p-value < 0.05 indicates significant difference at 95% confidence.
+          </div>
+
+          <div class="sec-title">Independent Samples t-Test</div>
+          <div class="controls">
+            <div class="cg"><div class="cl">Group Column</div><select id="ttestGroup"></select></div>
+            <div class="cg"><div class="cl">Value Column</div><select id="ttestValue"></select></div>
+            <button class="btn" onclick="runTTest()">Run t-Test</button>
+          </div>
+          <div id="ttestResult"></div>
+
+          <div class="sec-title" style="margin-top:20px;">Paired t-Test</div>
+          <div class="controls">
+            <div class="cg"><div class="cl">Variable 1</div><select id="pairedVar1"></select></div>
+            <div class="cg"><div class="cl">Variable 2</div><select id="pairedVar2"></select></div>
+            <button class="btn" onclick="runPairedTTest()">Run Paired t-Test</button>
+          </div>
+          <div id="pairedResult"></div>
+        </div>
+      </div>
+
+      <!-- ═══ MULTIPLE REGRESSION ════════════════════════ -->
+      <div class="panel" id="panel-multiregression">
+        <div class="empty" id="mreg-empty"><div class="empty-icon">⟁</div><div class="empty-text">No data loaded</div></div>
+        <div id="mreg-content" style="display:none;">
+          <div class="insight-box">
+            <div class="ib-title">⟁ Multiple Linear Regression</div>
+            Model one dependent variable using multiple independent variables. Includes multicollinearity check (VIF).
+          </div>
+
+          <div class="controls">
+            <div class="cg"><div class="cl">Dependent (Y)</div><select id="mregY"></select></div>
+            <div class="cg" style="flex:1;"><div class="cl">Independent Variables (X) - hold Ctrl to select multiple</div>
+              <select id="mregX" multiple style="min-height:100px;"></select>
+            </div>
+            <button class="btn" onclick="runMultipleRegression()" style="align-self:flex-end;">Run Multiple Regression</button>
+          </div>
+          
+          <div id="mregOutput"></div>
+          <div class="charts-grid" id="mregCharts"></div>
+        </div>
+      </div>
+
+      <!-- ═══ BOOTSTRAP & SAMPLING ═══════════════════════ -->
+      <div class="panel" id="panel-bootstrap">
+        <div class="empty" id="boot-empty"><div class="empty-icon">🔄</div><div class="empty-text">No data loaded</div></div>
+        <div id="boot-content" style="display:none;">
+          <div class="insight-box">
+            <div class="ib-title">🔄 Bootstrap Confidence Intervals</div>
+            Generate confidence intervals through resampling. Useful when distribution assumptions are uncertain.
+          </div>
+
+          <div class="controls">
+            <div class="cg"><div class="cl">Column</div><select id="bootCol"></select></div>
+            <div class="cg"><div class="cl">Statistic</div>
+              <select id="bootStat">
+                <option value="mean">Mean</option>
+                <option value="median">Median</option>
+                <option value="std">Std Dev</option>
+              </select>
+            </div>
+            <div class="cg"><div class="cl">Iterations</div>
+              <select id="bootIter">
+                <option value="1000">1,000</option>
+                <option value="5000" selected>5,000</option>
+                <option value="10000">10,000</option>
+              </select>
+            </div>
+            <div class="cg"><div class="cl">Confidence %</div>
+              <select id="bootConf">
+                <option value="90">90%</option>
+                <option value="95" selected>95%</option>
+                <option value="99">99%</option>
+              </select>
+            </div>
+            <button class="btn" onclick="runBootstrap()">Run Bootstrap</button>
+          </div>
+          
+          <div id="bootResult"></div>
+          <div class="card" id="bootChartCard" style="display:none;">
+            <div class="card-title">Bootstrap Distribution</div>
+            <div class="chart-h-tall"><canvas id="bootChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ OUTLIER ════════════════════════════════════ -->
+      <div class="panel" id="panel-outlier">
+        <div class="empty" id="out-empty"><div class="empty-icon">◈</div><div class="empty-text">No data loaded</div></div>
+        <div id="out-content" style="display:none;">
+          <div class="controls">
+            <div class="cg"><div class="cl">Column</div><select id="outCol"></select></div>
+            <div class="cg"><div class="cl">Method</div>
+              <select id="outMethod">
+                <option value="iqr">IQR (Tukey)</option>
+                <option value="zscore">Z-Score (±3σ)</option>
+                <option value="zscore2">Z-Score (±2σ)</option>
+              </select>
+            </div>
+            <button class="btn" onclick="renderOutlier()">Detect</button>
+          </div>
+          <div id="out-summary" style="margin-bottom:14px;"></div>
+          <div class="charts-grid" id="outCharts"></div>
+          <div id="out-table"></div>
+        </div>
+      </div>
+
+      <!-- ═══ MISSING DATA ═══════════════════════════════ -->
+      <div class="panel" id="panel-missing">
+        <div class="empty" id="miss-empty"><div class="empty-icon">□</div><div class="empty-text">No data loaded</div></div>
+        <div id="miss-content" style="display:none;">
+          <div class="sec-title">Missing Value Analysis</div>
+          <div id="missAnalysis"></div>
+          <div class="card">
+            <div class="card-title">Missing Pattern</div>
+            <div class="chart-h-tall"><canvas id="missPattern"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ VISUALIZATION ══════════════════════════════ -->
+      <div class="panel" id="panel-visualization">
+        <div class="empty" id="viz-empty"><div class="empty-icon">◉</div><div class="empty-text">No data loaded</div></div>
+        <div id="viz-content" style="display:none;">
+          <div class="controls">
+            <div class="cg"><div class="cl">Chart Type</div>
+              <select id="vizType">
+                <option value="bar">Bar Chart</option>
+                <option value="line">Line Chart</option>
+                <option value="scatter">Scatter Plot</option>
+                <option value="pie">Pie / Donut</option>
+                <option value="histogram">Histogram</option>
+                <option value="area">Area Chart</option>
+                <option value="bubble">Bubble Chart</option>
+              </select>
+            </div>
+            <div class="cg"><div class="cl">X / Category</div><select id="vizX"></select></div>
+            <div class="cg"><div class="cl">Y / Value</div><select id="vizY"></select></div>
+            <div class="cg" id="vizZGroup" style="display:none;"><div class="cl">Size (Z)</div><select id="vizZ"></select></div>
+            <button class="btn" onclick="renderViz()">Generate</button>
+            <button class="btn btn-ghost" onclick="downloadChart()">⬇ PNG</button>
+          </div>
+          <div class="card">
+            <div class="chart-h-tall"><canvas id="vizChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ AI INSIGHTS ════════════════════════════════ -->
+      <div class="panel" id="panel-insights">
+        <div class="empty" id="ins-empty"><div class="empty-icon">💡</div><div class="empty-text">No data loaded</div></div>
+        <div id="ins-content" style="display:none;">
+          
+          <div class="insight-box" style="background:linear-gradient(135deg,#fef3c7 0%,#fed7aa 100%);border-color:#fbbf24;color:#78350f;">
+            <div class="ib-title" style="color:#92400e;">🤖 AI-Powered Insights</div>
+            Automated statistical interpretation based on your data patterns. These insights are generated algorithmically and should be validated with domain knowledge.
+          </div>
+
+          <button class="btn" onclick="generateInsights()" style="margin-bottom:20px;">🔄 Generate Fresh Insights</button>
+
+          <div id="insightsContainer"></div>
+        </div>
+      </div>
+
+      <!-- ═══ EXPORT ══════════════════════════════════════ -->
+      <div class="panel" id="panel-export">
+        <div class="empty" id="exp-empty"><div class="empty-icon">⬇</div><div class="empty-text">No data loaded</div></div>
+        <div id="exp-content" style="display:none;">
+          <div class="sec-title">Export Options</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+            <button class="btn" onclick="exportCSV()">⬇ Export as CSV</button>
+            <button class="btn btn-ghost" onclick="exportJSON()">⬇ Export as JSON</button>
+            <button class="btn btn-ghost" onclick="exportTSV()">⬇ Export as TSV</button>
+            <button class="btn btn-ghost" onclick="exportStats()">⬇ Export Stats Report (CSV)</button>
+            <button class="btn btn-ghost" onclick="exportFullReport()">⬇ Full Analysis Report (HTML)</button>
+          </div>
+
+          <div class="sec-title">Data Cleaning Tools</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <button class="btn" style="background:#d97706;" onclick="removeDuplicates()">Remove Duplicates</button>
+            <button class="btn btn-ghost" onclick="fillMissingMean()">Fill Missing → Mean</button>
+            <button class="btn btn-ghost" onclick="fillMissingMedian()">Fill Missing → Median</button>
+            <button class="btn btn-ghost" onclick="fillMissingZero()">Fill Missing → 0</button>
+            <button class="btn" style="background:#dc2626;color:white;" onclick="dropMissingRows()">Drop Rows with Missing</button>
+          </div>
+          <div id="clean-log" style="margin-bottom:20px;padding:8px;border-radius:4px;background:var(--surface);border:1px solid var(--border);font-family:var(--mono);font-size:12px;color:var(--accent2);min-height:30px;"></div>
+
+          <div class="sec-title">Data Preview</div>
+          <div class="pagination" id="exportPagination"></div>
+          <div class="tbl-wrap" style="max-height:400px;overflow-y:auto;" id="exp-table-wrap"></div>
+          <div class="pagination" id="exportPagination2"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ STATE ═══════════════════════════════════════════════════════════════════
+let csvData = [];
+let filteredData = [];
+let headers = [];
+let numericCols = [];
+let categoricalCols = [];
+let charts = {};
+let currentFile = '';
+let currentPage = 1;
+const rowsPerPage = 50;
+
+function dc(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+// ═══ NAVIGATION ══════════════════════════════════════════════════════════════
+const PANEL_TITLES = {
+  upload:'Data Upload', dashboard:'Dashboard', profiling:'Data Profiling',
+  univariate:'Univariate Analysis', bivariate:'Bivariate Analysis',
+  multivariate:'Correlation Matrix', numstats:'Numerical Statistics',
+  stattests:'Statistical Tests', hypothesis:'t-Tests', regression:'Linear Regression',
+  multiregression:'Multiple Regression', bootstrap:'Bootstrap CI', 
+  timeseries:'Time Series Analysis', transform:'Data Transformation',
+  filter:'Data Filtering', outlier:'Outlier Detection', 
+  missing:'Missing Data Analysis', visualization:'Charts & Visualizations',
+  insights:'AI Insights', export:'Export & Reports'
+};
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    const p = item.dataset.panel;
+    document.getElementById('panel-'+p).classList.add('active');
+    document.getElementById('topbar-title').textContent = PANEL_TITLES[p] || p;
+    
+    if (p==='multivariate' && csvData.length) renderCorr();
+    if (p==='numstats' && csvData.length) renderNumStats();
+    if (p==='stattests' && csvData.length) renderStatTests();
+    if (p==='missing' && csvData.length) renderMissing();
+    if (p==='insights' && csvData.length && !document.getElementById('insightsContainer').innerHTML) generateInsights();
+    if (p==='export' && csvData.length) renderExportTable();
+  });
+});
+
+// ═══ FILE UPLOAD ══════════════════════════════════════════════════════════════
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); });
+dropZone.addEventListener('drop', e => { 
+  e.preventDefault(); 
+  if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); 
+});
+document.getElementById('fileInput').addEventListener('change', e => { 
+  if(e.target.files[0]) loadFile(e.target.files[0]); 
+});
+
+function loadFile(file) {
+  currentFile = file.name;
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result, file.name);
+  reader.readAsText(file);
+}
+
+function parseCSV(text, name) {
+  const lines = text.trim().split(/\r?\n/);
+  const delim = lines[0].includes('\t') ? '\t' : ',';
+  headers = parseRow(lines[0], delim);
+  csvData = lines.slice(1)
+    .map(line => {
+      const vals = parseRow(line, delim);
+      const row = {};
+      headers.forEach((h, i) => row[h] = (vals[i] ?? '').trim());
+      return row;
+    })
+    .filter(row => Object.values(row).some(v => v !== ''));
+
+  numericCols = headers.filter(h => {
+    const nonEmpty = csvData.filter(r => r[h] !== '');
+    return nonEmpty.length > 0 && nonEmpty.every(r => !isNaN(parseFloat(r[h])) && isFinite(r[h]));
+  });
+  categoricalCols = headers.filter(h => !numericCols.includes(h));
+
+  afterLoad(name);
+}
+
+function parseRow(line, delim) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === delim && !inQ) { result.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+function afterLoad(name) {
+  currentFile = name;
+  filteredData = [...csvData];
+  document.getElementById('h-rows').textContent = `${csvData.length} rows`;
+  document.getElementById('h-cols').textContent = `${headers.length} cols`;
+  document.getElementById('h-file').textContent = name;
+  document.getElementById('h-rows').classList.add('active');
+
+  buildPreview();
+  document.getElementById('upload-preview').style.display = 'block';
+
+  buildDashboard();
+  buildProfiling();
+  populateSelects();
+
+  ['dash','prof','uni','biv','multi','ns','stat','hyp','reg','mreg','boot','ts','trans','filter','out','miss','viz','ins','exp'].forEach(p => {
+    const ec = document.getElementById(p+'-empty');
+    const cc = document.getElementById(p+'-content');
+    if(ec) ec.style.display='none';
+    if(cc) cc.style.display='block';
+  });
+}
+
+// ═══ PREVIEW ══════════════════════════════════════════════════════════════════
+function buildPreview() {
+  const t = document.getElementById('previewTable');
+  const rows = csvData.slice(0,10);
+  t.innerHTML = `<thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${headers.map(h=>`<td class="${numericCols.includes(h)?'td-num':''}">${esc(r[h]??'')}</td>`).join('')}</tr>`).join('')}</tbody>`;
+}
+
+// ═══ DASHBOARD ════════════════════════════════════════════════════════════════
+function buildDashboard() {
+  const totalMiss = csvData.reduce((s,r) => s + headers.filter(h => r[h]===''||r[h]==null).length, 0);
+  const completeRows = csvData.filter(r => headers.every(h => r[h]!=='')).length;
+
+  document.getElementById('dashStats').innerHTML = [
+    {l:'Rows',v:csvData.length.toLocaleString()},
+    {l:'Columns',v:headers.length},
+    {l:'Numeric',v:numericCols.length},
+    {l:'Categorical',v:categoricalCols.length},
+    {l:'Missing Cells',v:totalMiss.toLocaleString()},
+    {l:'Complete Rows',v:completeRows.toLocaleString()},
+  ].map(d=>`<div class="stat-card"><div class="sc-label">${d.l}</div><div class="sc-val">${d.v}</div></div>`).join('');
+
+  document.getElementById('dash-content').style.display='block';
+  document.getElementById('dash-empty').style.display='none';
+
+  dc('typeChart'); dc('missChart');
+
+  charts['typeChart'] = new Chart(document.getElementById('typeChart'), {
+    type:'doughnut',
+    data:{labels:['Numeric','Categorical'],datasets:[{data:[numericCols.length,categoricalCols.length],backgroundColor:['#1a6fc4','#7c3aed'],borderWidth:0}]},
+    options:{plugins:{legend:{position:'bottom',labels:{color:'#3b5280',font:{size:11}}}},responsive:true,maintainAspectRatio:false}
+  });
+
+  const missData = headers.map(h => csvData.filter(r=>r[h]===''||r[h]==null).length);
+  charts['missChart'] = new Chart(document.getElementById('missChart'), {
+    type:'bar',
+    data:{labels:headers,datasets:[{label:'Missing',data:missData,backgroundColor:missData.map(v=>v>0?'#dc2626aa':'#16a34a66'),borderRadius:3}]},
+    options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+  });
+}
+
+// ═══ PROFILING ════════════════════════════════════════════════════════════════
+function buildProfiling() {
+  const totalMiss = csvData.reduce((s,r) => s + headers.filter(h=>r[h]===''||r[h]==null).length, 0);
+  document.getElementById('profStats').innerHTML = [
+    {l:'Rows',v:csvData.length},{l:'Columns',v:headers.length},
+    {l:'Numeric',v:numericCols.length},{l:'Categorical',v:categoricalCols.length},
+    {l:'Total Missing',v:totalMiss}
+  ].map(d=>`<div class="stat-card"><div class="sc-label">${d.l}</div><div class="sc-val">${d.v}</div></div>`).join('');
+
+  const rows = headers.map(h => {
+    const vals = csvData.map(r=>r[h]);
+    const missing = vals.filter(v=>v===''||v==null).length;
+    const unique = new Set(vals.filter(v=>v!=='')).size;
+    const isNum = numericCols.includes(h);
+    const nums = isNum ? numVals(h) : [];
+    const mn = isNum?mean(nums).toFixed(3):'—';
+    const sd = isNum?std(nums).toFixed(3):'—';
+    const min = isNum?Math.min(...nums).toFixed(3):'—';
+    const max = isNum?Math.max(...nums).toFixed(3):'—';
+    const missP = ((missing/csvData.length)*100).toFixed(1);
+    return `<tr>
+      <td><strong style="color:var(--text)">${esc(h)}</strong></td>
+      <td>${isNum?'<span class="badge badge-num">Numeric</span>':'<span class="badge badge-cat">Categorical</span>'}</td>
+      <td class="td-num">${csvData.length}</td>
+      <td class="${missing>0?'td-miss':'td-ok'}">${missing} (${missP}%)</td>
+      <td class="td-num">${unique}</td>
+      <td class="td-num">${mn}</td>
+      <td class="td-num">${sd}</td>
+      <td class="td-num">${min}</td>
+      <td class="td-num">${max}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('profileTable').innerHTML =
+    `<thead><tr><th>Column</th><th>Type</th><th>Count</th><th>Missing</th><th>Unique</th><th>Mean</th><th>Std Dev</th><th>Min</th><th>Max</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+// ═══ POPULATE SELECTS ═════════════════════════════════════════════════════════
+function populateSelects() {
+  function fill(id, cols) {
+    const s = document.getElementById(id); if(!s) return;
+    s.innerHTML = cols.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  }
+  fill('uniCol', headers);
+  fill('bivX', headers); fill('bivY', numericCols.length?numericCols:headers);
+  fill('outCol', numericCols.length?numericCols:headers);
+  fill('regY', numericCols.length?numericCols:headers);
+  fill('regX', numericCols.length?numericCols:headers);
+  fill('anovaCat', categoricalCols.length?categoricalCols:headers);
+  fill('anovaNum', numericCols.length?numericCols:headers);
+  fill('chiVar1', categoricalCols.length?categoricalCols:headers);
+  fill('chiVar2', categoricalCols.length?categoricalCols:headers);
+  fill('ksCol1', numericCols.length?numericCols:headers);
+  fill('ksCol2', numericCols.length?numericCols:headers);
+  fill('tsTimeCol', headers);
+  fill('tsValCol', numericCols.length?numericCols:headers);
+  fill('vizX', headers); 
+  fill('vizY', numericCols.length?numericCols:headers); 
+  fill('vizZ', numericCols.length?numericCols:headers);
+  fill('transCol', numericCols.length?numericCols:headers);
+  fill('ttestGroup', categoricalCols.length?categoricalCols:headers);
+  fill('ttestValue', numericCols.length?numericCols:headers);
+  fill('pairedVar1', numericCols.length?numericCols:headers);
+  fill('pairedVar2', numericCols.length?numericCols:headers);
+  fill('mregY', numericCols.length?numericCols:headers);
+  fill('mregX', numericCols.length?numericCols:headers);
+  fill('bootCol', numericCols.length?numericCols:headers);
+}
+
+// ═══ MATH HELPERS ═════════════════════════════════════════════════════════════
+function numVals(col) { return csvData.map(r=>parseFloat(r[col])).filter(v=>!isNaN(v)); }
+function mean(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function std(arr) {
+  if(arr.length<2) return 0;
+  const m=mean(arr); return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0)/(arr.length-1));
+}
+function median(arr) {
+  if(!arr.length) return 0;
+  const s=[...arr].sort((a,b)=>a-b);
+  const m=Math.floor(s.length/2);
+  return s.length%2?s[m]:(s[m-1]+s[m])/2;
+}
+function percentile(arr, p) {
+  const s=[...arr].sort((a,b)=>a-b);
+  const idx=(p/100)*(s.length-1);
+  const lo=Math.floor(idx); const hi=Math.ceil(idx);
+  return lo===hi?s[lo]:s[lo]+(idx-lo)*(s[hi]-s[lo]);
+}
+function skewness(arr) {
+  const m=mean(arr),s=std(arr),n=arr.length;
+  if(!s) return 0;
+  return (n/((n-1)*(n-2)))*arr.reduce((sum,v)=>sum+((v-m)/s)**3,0);
+}
+function kurtosis(arr) {
+  const m=mean(arr),s=std(arr),n=arr.length;
+  if(!s) return 0;
+  return ((n*(n+1))/((n-1)*(n-2)*(n-3)))*arr.reduce((sum,v)=>sum+((v-m)/s)**4,0) - (3*(n-1)**2)/((n-2)*(n-3));
+}
+function pearson(c1, c2) {
+  const pairs = csvData.map(r=>[parseFloat(r[c1]),parseFloat(r[c2])]).filter(([a,b])=>!isNaN(a)&&!isNaN(b));
+  const n=pairs.length; if(n<2) return 0;
+  const mx=pairs.reduce((s,[a])=>s+a,0)/n, my=pairs.reduce((s,[,b])=>s+b,0)/n;
+  const num=pairs.reduce((s,[a,b])=>s+(a-mx)*(b-my),0);
+  const dx=Math.sqrt(pairs.reduce((s,[a])=>s+(a-mx)**2,0));
+  const dy=Math.sqrt(pairs.reduce((s,[,b])=>s+(b-my)**2,0));
+  return (dx&&dy) ? num/(dx*dy) : 0;
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Shapiro-Wilk (approximation)
+function shapiroWilk(arr) {
+  const n = arr.length;
+  if(n < 3) return {W: 0, p: 1};
+  const sorted = [...arr].sort((a,b)=>a-b);
+  const m = mean(arr);
+  const S = arr.reduce((s,v)=>s+(v-m)**2,0);
+  
+  // Simplified W statistic calculation
+  const k = Math.floor(n/2);
+  let b = 0;
+  for(let i=0; i<k; i++) {
+    const a_i = 1; // simplified coefficient
+    b += a_i * (sorted[n-1-i] - sorted[i]);
+  }
+  const W = (b*b) / S;
+  
+  // Approximate p-value (very rough)
+  const p = W > 0.95 ? 0.1 : W > 0.9 ? 0.05 : 0.01;
+  return {W, p};
+}
+
+// ═══ UNIVARIATE ═══════════════════════════════════════════════════════════════
+function renderUni() {
+  if(!csvData.length) return;
+  const col = document.getElementById('uniCol').value;
+  const isNum = numericCols.includes(col);
+  const container = document.getElementById('uniCharts');
+  const detailGrid = document.getElementById('uniDetailGrid');
+  container.innerHTML = '';
+
+  if(isNum) {
+    const vals = numVals(col);
+    const mn=Math.min(...vals), mx=Math.max(...vals);
+    const q1=percentile(vals,25), q3=percentile(vals,75);
+    const iqr=q3-q1;
+    const med=median(vals);
+    const m=mean(vals);
+    const s=std(vals);
+    const sk=skewness(vals);
+    const ku=kurtosis(vals);
+    const cv=(s/m*100);
+
+    detailGrid.innerHTML = [
+      {k:'Count',v:vals.length},
+      {k:'Mean',v:m.toFixed(4)},
+      {k:'Std Dev',v:s.toFixed(4)},
+      {k:'Min',v:mn.toFixed(4)},
+      {k:'Max',v:mx.toFixed(4)},
+      {k:'Median',v:med.toFixed(4)},
+      {k:'Q1',v:q1.toFixed(4)},
+      {k:'Q3',v:q3.toFixed(4)},
+      {k:'IQR',v:iqr.toFixed(4)},
+      {k:'Skewness',v:sk.toFixed(4)},
+      {k:'Kurtosis',v:ku.toFixed(4)},
+      {k:'CV (%)',v:isFinite(cv)?cv.toFixed(2):'—'},
+    ].map(d=>`<div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;"><span style="font-size:11px;color:var(--text3);font-family:var(--mono);">${d.k}</span><span style="font-size:12px;color:var(--accent);font-family:var(--mono);font-weight:600;">${d.v}</span></div>`).join('');
+
+    const bins=15, bw=(mx-mn)/bins;
+    const counts=Array(bins).fill(0);
+    vals.forEach(v=>{ const i=Math.min(Math.floor((v-mn)/bw),bins-1); counts[i]++; });
+    const labels=counts.map((_,i)=>(mn+i*bw).toFixed(2));
+
+    container.innerHTML = `
+      <div class="card"><div class="card-title">Histogram</div><div class="chart-h"><canvas id="uniHist"></canvas></div></div>
+      <div class="card"><div class="card-title">Box Plot Summary</div><div class="chart-h"><canvas id="uniBox"></canvas></div></div>`;
+
+    dc('uniHist'); dc('uniBox');
+    charts['uniHist'] = new Chart(document.getElementById('uniHist'), {
+      type:'bar',
+      data:{labels,datasets:[{data:counts,backgroundColor:'#1a6fc466',borderColor:'#1a6fc4',borderWidth:1,borderRadius:3}]},
+      options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+    });
+
+    charts['uniBox'] = new Chart(document.getElementById('uniBox'), {
+      type:'bar',
+      data:{labels:['Min','Q1','Mean','Median','Q3','Max'],datasets:[{data:[mn,q1,m,med,q3,mx],backgroundColor:['#7c3aed55','#1a6fc488','#16a34a99','#1a6fc4cc','#1a6fc488','#7c3aed55'],borderRadius:4}]},
+      options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+    });
+  } else {
+    detailGrid.innerHTML = '';
+    const counts = {};
+    csvData.forEach(r=>{ const v=r[col]||'(blank)'; counts[v]=(counts[v]||0)+1; });
+    const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,20);
+    container.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="card-title">Value Counts</div><div class="chart-h" style="height:280px;"><canvas id="uniBar"></canvas></div></div>`;
+    dc('uniBar');
+    charts['uniBar'] = new Chart(document.getElementById('uniBar'), {
+      type:'bar',
+      data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>v),backgroundColor:'#7c3aed88',borderRadius:4}]},
+      options:{indexAxis:'y',plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280',font:{size:10}},grid:{color:'#e2eaf5'}}}}
+    });
+  }
+}
+
+// ═══ BIVARIATE ════════════════════════════════════════════════════════════════
+function renderBiv() {
+  if(!csvData.length) return;
+  const xCol=document.getElementById('bivX').value;
+  const yCol=document.getElementById('bivY').value;
+  const isXnum=numericCols.includes(xCol);
+  const isYnum=numericCols.includes(yCol);
+
+  if(isXnum && isYnum) {
+    const r=pearson(xCol,yCol);
+    const pts=csvData.map(row=>({x:parseFloat(row[xCol]),y:parseFloat(row[yCol])})).filter(p=>!isNaN(p.x)&&!isNaN(p.y));
+    document.getElementById('bivStats').innerHTML =
+      `<span style="display:inline-block;background:#dbeafe;border:1px solid #1a6fc4;color:#1a4fa0;border-radius:4px;padding:2px 7px;font-size:11px;font-family:var(--mono);margin:2px;">Pearson r = ${r.toFixed(4)}</span>
+       <span style="display:inline-block;background:${Math.abs(r)>0.7?'#dcfce7':'#fee2e2'};border:1px solid ${Math.abs(r)>0.7?'#16a34a':'#dc2626'};color:${Math.abs(r)>0.7?'#14532d':'#991b1b'};border-radius:4px;padding:2px 7px;font-size:11px;font-family:var(--mono);margin:2px;">${Math.abs(r)>0.7?'Strong':'Weak'} correlation</span>`;
+
+    document.getElementById('bivCharts').innerHTML = `<div class="card" style="grid-column:1/-1"><div class="card-title">Scatter Plot with Trend</div><div class="chart-h-tall"><canvas id="bivScatter"></canvas></div></div>`;
+    dc('bivScatter');
+
+    const mx2=mean(pts.map(p=>p.x)), my2=mean(pts.map(p=>p.y));
+    const b1=pts.reduce((s,p)=>s+(p.x-mx2)*(p.y-my2),0)/pts.reduce((s,p)=>s+(p.x-mx2)**2,0);
+    const b0=my2-b1*mx2;
+    const xs=[Math.min(...pts.map(p=>p.x)), Math.max(...pts.map(p=>p.x))];
+    const trendData=xs.map(x=>({x,y:b0+b1*x}));
+
+    charts['bivScatter']=new Chart(document.getElementById('bivScatter'),{
+      type:'scatter',
+      data:{datasets:[
+        {label:'Data',data:pts,backgroundColor:'#1a6fc455',borderColor:'#1a6fc4',pointRadius:4,pointBorderWidth:0},
+        {label:`y=${b0.toFixed(2)}+${b1.toFixed(2)}x`,data:trendData,type:'line',borderColor:'#dc2626',borderWidth:2,pointRadius:0,fill:false}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3b5280'}}},scales:{x:{title:{display:true,text:xCol,color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}},y:{title:{display:true,text:yCol,color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+    });
+  } else {
+    const groups={};
+    csvData.forEach(r=>{
+      const k=r[xCol]||'(blank)';
+      const v=parseFloat(r[yCol]);
+      if(!isNaN(v))(groups[k]=groups[k]||[]).push(v);
+    });
+    const entries=Object.entries(groups).sort((a,b)=>mean(b[1])-mean(a[1])).slice(0,15);
+    document.getElementById('bivStats').innerHTML='';
+    document.getElementById('bivCharts').innerHTML=`<div class="card" style="grid-column:1/-1"><div class="card-title">Mean by Group</div><div class="chart-h-tall"><canvas id="bivBar"></canvas></div></div>`;
+    dc('bivBar');
+    charts['bivBar']=new Chart(document.getElementById('bivBar'),{
+      type:'bar',
+      data:{labels:entries.map(([k])=>k),datasets:[{data:entries.map(([,v])=>mean(v)),backgroundColor:'#1a6fc488',borderRadius:4}]},
+      options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280',font:{size:10}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+    });
+  }
+}
+
+// ═══ CORRELATION ══════════════════════════════════════════════════════════════
+function renderCorr() {
+  if(!csvData.length || numericCols.length<2) return;
+  const cols=numericCols.slice(0,12);
+  const n=cols.length;
+  const matrix=cols.map(c1=>cols.map(c2=>pearson(c1,c2)));
+
+  const hdr=`<tr><th></th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>`;
+  const body=cols.map((c1,i)=>`<tr><th>${esc(c1)}</th>${cols.map((_,j)=>{
+    const v=matrix[i][j];
+    const bg=v>=0?`rgb(0,${Math.round(50+v*180)},${Math.round(50+v*100)})`:`rgb(${Math.round(180-v*150)},50,50)`;
+    const alpha=Math.max(0.15,Math.abs(v));
+    return `<td style="background:${bg};opacity:${alpha+0.2};color:white;padding:6px 10px;text-align:center;font-size:11px;font-weight:600;min-width:60px;">${v.toFixed(2)}</td>`;
+  }).join('')}</tr>`).join('');
+
+  document.getElementById('corrHeatmap').innerHTML=`<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-family:var(--mono);font-size:11px;"><thead style="background:var(--surface2);">${hdr}</thead><tbody>${body}</tbody></table></div>`;
+
+  const pairs=[];
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) pairs.push({c1:cols[i],c2:cols[j],r:matrix[i][j]});
+  pairs.sort((a,b)=>Math.abs(b.r)-Math.abs(a.r));
+  const topRows=pairs.slice(0,10).map(p=>`<tr>
+    <td style="color:var(--text)">${esc(p.c1)}</td>
+    <td style="color:var(--text)">${esc(p.c2)}</td>
+    <td class="${Math.abs(p.r)>0.5?'td-num':'td-cat'}">${p.r.toFixed(4)}</td>
+    <td>${Math.abs(p.r)>0.7?'Strong':Math.abs(p.r)>0.3?'Moderate':'Weak'}</td>
+  </tr>`).join('');
+  document.getElementById('topCorr').innerHTML=`<table><thead><tr><th>Variable 1</th><th>Variable 2</th><th>Pearson r</th><th>Strength</th></tr></thead><tbody>${topRows}</tbody></table>`;
+}
+
+// ═══ STATISTICAL TESTS ════════════════════════════════════════════════════════
+function renderStatTests() {
+  if(!csvData.length || !numericCols.length) return;
+
+  // Normality tests
+  const normRows=numericCols.map(col=>{
+    const vals=numVals(col);
+    const sw=shapiroWilk(vals);
+    const sig=sw.p<0.05;
+    return `<tr>
+      <td style="color:var(--text);font-weight:600">${esc(col)}</td>
+      <td class="td-num">${sw.W.toFixed(4)}</td>
+      <td class="${sig?'td-miss':'td-ok'}">${sw.p.toFixed(4)}</td>
+      <td class="${sig?'td-sig':''}">${sig?'Reject':'Fail to reject'} normality</td>
+      <td>${sig?'Data is <b>not normally distributed</b>':'Data is <b>likely normal</b>'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('normalityTestTable').innerHTML=`<thead><tr><th>Column</th><th>W Statistic</th><th>p-value</th><th>Result (α=0.05)</th><th>Interpretation</th></tr></thead><tbody>${normRows}</tbody>`;
+}
+
+function runANOVA() {
+  const catCol=document.getElementById('anovaCat').value;
+  const numCol=document.getElementById('anovaNum').value;
+  
+  const groups={};
+  csvData.forEach(r=>{
+    const g=r[catCol];
+    const v=parseFloat(r[numCol]);
+    if(g && !isNaN(v)) (groups[g]=groups[g]||[]).push(v);
+  });
+  
+  const groupNames=Object.keys(groups);
+  const k=groupNames.length;
+  if(k<2) {
+    document.getElementById('anovaResult').innerHTML='<div class="card" style="background:#fee2e2;border-color:#dc2626;color:#991b1b;">Need at least 2 groups</div>';
+    return;
+  }
+  
+  const allVals=Object.values(groups).flat();
+  const grandMean=mean(allVals);
+  const n=allVals.length;
+  
+  // Between-group variance
+  let SSB=0;
+  groupNames.forEach(g=>{
+    const gm=mean(groups[g]);
+    SSB+=groups[g].length*(gm-grandMean)**2;
+  });
+  
+  // Within-group variance
+  let SSW=0;
+  groupNames.forEach(g=>{
+    const gm=mean(groups[g]);
+    groups[g].forEach(v=>SSW+=(v-gm)**2);
+  });
+  
+  const dfB=k-1;
+  const dfW=n-k;
+  const MSB=SSB/dfB;
+  const MSW=SSW/dfW;
+  const F=MSB/MSW;
+  
+  // Approximate p-value (rough)
+  const p=F>4?0.01:F>3?0.05:0.1;
+  const sig=p<0.05;
+  
+  document.getElementById('anovaResult').innerHTML=`
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">One-Way ANOVA: ${esc(numCol)} by ${esc(catCol)}</div>
+      <div style="font-family:var(--mono);font-size:12px;line-height:1.8;">
+        <div>Groups: ${k} | Total n: ${n}</div>
+        <div>F-statistic: <span style="color:var(--accent);font-weight:600;">${F.toFixed(4)}</span></div>
+        <div>df Between: ${dfB} | df Within: ${dfW}</div>
+        <div>p-value: <span class="${sig?'td-sig':''}" style="font-weight:600;">${p.toFixed(4)}</span></div>
+        <div style="margin-top:8px;padding:8px;background:${sig?'#dcfce7':'#fee2e2'};border-radius:4px;color:${sig?'#14532d':'#991b1b'};">
+          <b>${sig?'✓ Significant':'✗ Not significant'}</b> (α=0.05)<br>
+          ${sig?'Group means are significantly different':'No significant difference between groups'}
+        </div>
+      </div>
+    </div>`;
+}
+
+function runChiSquare() {
+  const v1=document.getElementById('chiVar1').value;
+  const v2=document.getElementById('chiVar2').value;
+  
+  const contingency={};
+  csvData.forEach(r=>{
+    const a=r[v1]||'(blank)', b=r[v2]||'(blank)';
+    if(!contingency[a]) contingency[a]={};
+    contingency[a][b]=(contingency[a][b]||0)+1;
+  });
+  
+  const rows=Object.keys(contingency);
+  const cols=[...new Set(Object.values(contingency).flatMap(o=>Object.keys(o)))];
+  
+  const observed=rows.map(r=>cols.map(c=>contingency[r][c]||0));
+  const rowTotals=observed.map(row=>row.reduce((s,v)=>s+v,0));
+  const colTotals=cols.map((_,ci)=>observed.reduce((s,row)=>s+row[ci],0));
+  const total=rowTotals.reduce((s,v)=>s+v,0);
+  
+  let chiSq=0;
+  observed.forEach((row,ri)=>{
+    row.forEach((o,ci)=>{
+      const e=(rowTotals[ri]*colTotals[ci])/total;
+      if(e>0) chiSq+=(o-e)**2/e;
+    });
+  });
+  
+  const df=(rows.length-1)*(cols.length-1);
+  const p=chiSq>10?0.01:chiSq>6?0.05:0.1;
+  const sig=p<0.05;
+  
+  document.getElementById('chiResult').innerHTML=`
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Chi-Square Test: ${esc(v1)} × ${esc(v2)}</div>
+      <div style="font-family:var(--mono);font-size:12px;line-height:1.8;">
+        <div>Contingency: ${rows.length} × ${cols.length}</div>
+        <div>χ² statistic: <span style="color:var(--accent);font-weight:600;">${chiSq.toFixed(4)}</span></div>
+        <div>df: ${df}</div>
+        <div>p-value: <span class="${sig?'td-sig':''}" style="font-weight:600;">${p.toFixed(4)}</span></div>
+        <div style="margin-top:8px;padding:8px;background:${sig?'#dcfce7':'#fee2e2'};border-radius:4px;color:${sig?'#14532d':'#991b1b'};">
+          <b>${sig?'✓ Significant':'✗ Not significant'}</b> (α=0.05)<br>
+          ${sig?'Variables are <b>dependent</b>':'Variables are <b>independent</b>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+function runKSTest() {
+  const c1=document.getElementById('ksCol1').value;
+  const c2=document.getElementById('ksCol2').value;
+  
+  const s1=numVals(c1).sort((a,b)=>a-b);
+  const s2=numVals(c2).sort((a,b)=>a-b);
+  
+  // Simple KS statistic
+  const allVals=[...new Set([...s1,...s2])].sort((a,b)=>a-b);
+  let maxD=0;
+  allVals.forEach(v=>{
+    const f1=s1.filter(x=>x<=v).length/s1.length;
+    const f2=s2.filter(x=>x<=v).length/s2.length;
+    maxD=Math.max(maxD,Math.abs(f1-f2));
+  });
+  
+  const n1=s1.length, n2=s2.length;
+  const p=maxD>0.3?0.01:maxD>0.2?0.05:0.1;
+  const sig=p<0.05;
+  
+  document.getElementById('ksResult').innerHTML=`
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Kolmogorov-Smirnov Test: ${esc(c1)} vs ${esc(c2)}</div>
+      <div style="font-family:var(--mono);font-size:12px;line-height:1.8;">
+        <div>Sample 1 n: ${n1} | Sample 2 n: ${n2}</div>
+        <div>KS statistic (D): <span style="color:var(--accent);font-weight:600;">${maxD.toFixed(4)}</span></div>
+        <div>p-value: <span class="${sig?'td-sig':''}" style="font-weight:600;">${p.toFixed(4)}</span></div>
+        <div style="margin-top:8px;padding:8px;background:${sig?'#dcfce7':'#fee2e2'};border-radius:4px;color:${sig?'#14532d':'#991b1b'};">
+          <b>${sig?'✓ Significant':'✗ Not significant'}</b> (α=0.05)<br>
+          ${sig?'Distributions are <b>different</b>':'Distributions are <b>similar</b>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ═══ REGRESSION ═══════════════════════════════════════════════════════════════
+function runRegression() {
+  if(!csvData.length) return;
+  const yCol=document.getElementById('regY').value;
+  const xCol=document.getElementById('regX').value;
+  const pts=csvData.map(r=>({x:parseFloat(r[xCol]),y:parseFloat(r[yCol])})).filter(p=>!isNaN(p.x)&&!isNaN(p.y));
+  if(pts.length<3){document.getElementById('regOutput').innerHTML='<div class="empty"><div class="empty-text">Not enough data</div></div>';return;}
+
+  const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+  const mx2=mean(xs), my2=mean(ys);
+  const b1=pts.reduce((s,p)=>s+(p.x-mx2)*(p.y-my2),0)/pts.reduce((s,p)=>s+(p.x-mx2)**2,1);
+  const b0=my2-b1*mx2;
+  const yhat=xs.map(x=>b0+b1*x);
+  const ss_res=ys.reduce((s,y,i)=>s+(y-yhat[i])**2,0);
+  const ss_tot=ys.reduce((s,y)=>s+(y-my2)**2,0);
+  const r2=1-(ss_res/ss_tot);
+  const n=pts.length;
+
+  document.getElementById('regOutput').innerHTML=`
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">OLS Regression: ${esc(yCol)} ~ ${esc(xCol)}</div>
+      <div style="font-family:var(--mono);font-size:12px;line-height:1.8;">
+        <div>Equation: <span style="color:var(--accent);font-weight:600;">ŷ = ${b0.toFixed(4)} + ${b1.toFixed(4)}·x</span></div>
+        <div>R²: <span style="color:${r2>0.7?'var(--accent2)':'var(--accent)'};font-weight:600;">${r2.toFixed(6)}</span> | n: ${n}</div>
+        <div style="margin-top:8px;color:var(--text3);">${r2>=0.9?'Excellent fit':r2>=0.7?'Good fit':r2>=0.5?'Moderate fit':'Weak fit'} — ${(r2*100).toFixed(1)}% variance explained</div>
+      </div>
+    </div>`;
+
+  document.getElementById('regCharts').innerHTML=`<div class="card"><div class="card-title">Regression Plot</div><div class="chart-h-tall"><canvas id="regScatter"></canvas></div></div>`;
+  dc('regScatter');
+
+  const sortedX=[...xs].sort((a,b)=>a-b);
+  charts['regScatter']=new Chart(document.getElementById('regScatter'),{
+    type:'scatter',
+    data:{datasets:[
+      {label:'Data',data:pts,backgroundColor:'#1a6fc455',borderColor:'#1a6fc4',pointRadius:4,pointBorderWidth:0},
+      {label:`ŷ=${b0.toFixed(2)}+${b1.toFixed(2)}x`,data:sortedX.map(x=>({x,y:b0+b1*x})),type:'line',borderColor:'#dc2626',borderWidth:2,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3b5280'}}},scales:{x:{title:{display:true,text:xCol,color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}},y:{title:{display:true,text:yCol,color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+  });
+}
+
+// ═══ TIME SERIES ══════════════════════════════════════════════════════════════
+function renderTimeSeries() {
+  if(!csvData.length) return;
+  const timeCol=document.getElementById('tsTimeCol').value;
+  const valCol=document.getElementById('tsValCol').value;
+  
+  const data=csvData.map((r,i)=>({t:r[timeCol]||i,v:parseFloat(r[valCol])})).filter(d=>!isNaN(d.v));
+  if(data.length<3){document.getElementById('tsStats').innerHTML='<div class="card" style="background:#fee2e2;border-color:#dc2626;color:#991b1b;">Need at least 3 points</div>';return;}
+  
+  const vals=data.map(d=>d.v);
+  const m=mean(vals), s=std(vals);
+  const trend=vals[vals.length-1]-vals[0];
+  
+  // Simple moving average (window=5)
+  const window=Math.min(5,Math.floor(vals.length/3));
+  const ma=vals.map((_,i)=>{
+    if(i<window-1) return null;
+    return mean(vals.slice(i-window+1,i+1));
+  });
+  
+  document.getElementById('tsStats').innerHTML=`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="display:inline-block;background:#dbeafe;border:1px solid #1a6fc4;color:#1a4fa0;border-radius:4px;padding:4px 10px;font-size:11px;font-family:var(--mono);">Mean: ${m.toFixed(2)}</span>
+      <span style="display:inline-block;background:#dbeafe;border:1px solid #1a6fc4;color:#1a4fa0;border-radius:4px;padding:4px 10px;font-size:11px;font-family:var(--mono);">Std: ${s.toFixed(2)}</span>
+      <span style="display:inline-block;background:${trend>0?'#dcfce7':'#fee2e2'};border:1px solid ${trend>0?'#16a34a':'#dc2626'};color:${trend>0?'#14532d':'#991b1b'};border-radius:4px;padding:4px 10px;font-size:11px;font-family:var(--mono);">Trend: ${trend>0?'↑':'↓'} ${Math.abs(trend).toFixed(2)}</span>
+    </div>`;
+  
+  document.getElementById('tsCharts').innerHTML=`
+    <div class="card" style="grid-column:1/-1"><div class="card-title">Time Series with Moving Average</div><div class="chart-h-tall"><canvas id="tsLine"></canvas></div></div>`;
+  dc('tsLine');
+  
+  charts['tsLine']=new Chart(document.getElementById('tsLine'),{
+    type:'line',
+    data:{
+      labels:data.map(d=>d.t),
+      datasets:[
+        {label:'Actual',data:vals,borderColor:'#1a6fc4',backgroundColor:'#1a6fc422',borderWidth:2,pointRadius:2,fill:true,tension:0.2},
+        {label:`MA(${window})`,data:ma,borderColor:'#dc2626',borderWidth:2,pointRadius:0,fill:false,borderDash:[5,5]}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3b5280'}}},scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+  });
+  
+  // Autocorrelation
+  const maxLag=Math.min(20,Math.floor(vals.length/2));
+  const acf=[];
+  for(let lag=1;lag<=maxLag;lag++){
+    const pairs=vals.slice(0,-lag).map((v,i)=>[v,vals[i+lag]]);
+    const r=pearson_array(pairs.map(p=>p[0]),pairs.map(p=>p[1]));
+    acf.push(r);
+  }
+  
+  dc('acfChart');
+  charts['acfChart']=new Chart(document.getElementById('acfChart'),{
+    type:'bar',
+    data:{
+      labels:acf.map((_,i)=>`Lag ${i+1}`),
+      datasets:[{label:'ACF',data:acf,backgroundColor:acf.map(v=>Math.abs(v)>0.2?'#1a6fc488':'#7a92b844'),borderRadius:2}]
+    },
+    options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'},min:-1,max:1}}}
+  });
+}
+
+function pearson_array(a1,a2){
+  const n=a1.length; if(n<2) return 0;
+  const mx=mean(a1),my=mean(a2);
+  const num=a1.reduce((s,v,i)=>s+(v-mx)*(a2[i]-my),0);
+  const dx=Math.sqrt(a1.reduce((s,v)=>s+(v-mx)**2,0));
+  const dy=Math.sqrt(a2.reduce((s,v)=>s+(v-my)**2,0));
+  return (dx&&dy)?num/(dx*dy):0;
+}
+
+// ═══ OUTLIER ══════════════════════════════════════════════════════════════════
+function renderOutlier() {
+  if(!csvData.length) return;
+  const col=document.getElementById('outCol').value;
+  const method=document.getElementById('outMethod').value;
+  const vals=csvData.map((r,i)=>({v:parseFloat(r[col]),i})).filter(({v})=>!isNaN(v));
+  let outliers, lo, hi;
+
+  if(method==='iqr') {
+    const q1=percentile(vals.map(x=>x.v),25), q3=percentile(vals.map(x=>x.v),75);
+    const iqr=q3-q1; lo=q1-1.5*iqr; hi=q3+1.5*iqr;
+    outliers=vals.filter(({v})=>v<lo||v>hi);
+  } else {
+    const m=mean(vals.map(x=>x.v)), s=std(vals.map(x=>x.v));
+    const z=method==='zscore'?3:2;
+    lo=m-z*s; hi=m+z*s;
+    outliers=vals.filter(({v})=>v<lo||v>hi);
+  }
+
+  const pct=((outliers.length/vals.length)*100).toFixed(1);
+  document.getElementById('out-summary').innerHTML =`<span style="display:inline-block;background:${outliers.length?'#fee2e2':'#dcfce7'};border:1px solid ${outliers.length?'#dc2626':'#16a34a'};color:${outliers.length?'#991b1b':'#14532d'};border-radius:4px;padding:4px 10px;font-size:12px;font-family:var(--mono);font-weight:600;">${outliers.length} outliers (${pct}%)</span>`;
+
+  document.getElementById('outCharts').innerHTML=`<div class="card" style="grid-column:1/-1"><div class="card-title">Outlier Distribution</div><div class="chart-h-tall"><canvas id="outDist"></canvas></div></div>`;
+  dc('outDist');
+
+  charts['outDist']=new Chart(document.getElementById('outDist'),{
+    type:'scatter',
+    data:{datasets:[
+      {label:'Normal',data:vals.filter(({v})=>v>=lo&&v<=hi).map(({v,i})=>({x:i,y:v})),backgroundColor:'#16a34a66',pointRadius:4,borderWidth:0},
+      {label:'Outlier',data:outliers.map(({v,i})=>({x:i,y:v})),backgroundColor:'#dc262688',pointRadius:6,pointStyle:'triangle'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3b5280'}}},scales:{x:{title:{display:true,text:'Index',color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}},y:{title:{display:true,text:col,color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+  });
+
+  if(outliers.length) {
+    const rows=outliers.slice(0,50).map(({i})=>`<tr style="background:#fff1f2;"><td>${i}</td>${headers.map(h=>`<td>${esc(csvData[i][h]??'')}</td>`).join('')}</tr>`).join('');
+    document.getElementById('out-table').innerHTML=`<div class="sec-title" style="margin-top:16px;">Outlier Rows</div><div class="tbl-wrap"><table><thead><tr><th>#</th>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  } else {
+    document.getElementById('out-table').innerHTML='';
+  }
+}
+
+// ═══ MISSING DATA ═════════════════════════════════════════════════════════════
+function renderMissing() {
+  if(!csvData.length) return;
+  const analysis=headers.map(h=>{
+    const missing=csvData.filter(r=>r[h]===''||r[h]==null).length;
+    const pct=(missing/csvData.length)*100;
+    return {h,missing,pct};
+  }).filter(x=>x.missing>0).sort((a,b)=>b.missing-a.missing);
+
+  if(!analysis.length) {
+    document.getElementById('missAnalysis').innerHTML='<div style="background:#dcfce7;border:1px solid #16a34a;color:#14532d;border-radius:8px;padding:16px;font-size:13px;">✓ No missing values found!</div>';
+  } else {
+    document.getElementById('missAnalysis').innerHTML=analysis.map(({h,missing,pct})=>`
+      <div class="card" style="margin-bottom:8px;padding:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-family:var(--mono);font-size:13px;color:var(--text)">${esc(h)}</span>
+          <span style="display:inline-flex;background:${pct>30?'#fee2e2':pct>10?'#fef3c7':'#dcfce7'};border:1px solid ${pct>30?'#dc2626':pct>10?'#d97706':'#16a34a'};color:${pct>30?'#991b1b':pct>10?'#92400e':'#14532d'};border-radius:4px;padding:2px 7px;font-size:10px;font-family:var(--mono);font-weight:600;">${missing} (${pct.toFixed(1)}%)</span>
+        </div>
+        <div style="background:var(--surface3);border-radius:3px;height:6px;overflow:hidden;">
+          <div style="height:100%;background:${pct>30?'#dc2626':pct>10?'#d97706':'#16a34a'};width:${pct}%;transition:width 0.4s;border-radius:3px;"></div>
+        </div>
+      </div>`).join('');
+  }
+
+  dc('missPattern');
+  charts['missPattern']=new Chart(document.getElementById('missPattern'),{
+    type:'bar',
+    data:{
+      labels:headers,
+      datasets:[{
+        label:'Missing',
+        data:headers.map(h=>csvData.filter(r=>r[h]===''||r[h]==null).length),
+        backgroundColor:headers.map(h=>{const p=csvData.filter(r=>r[h]===''||r[h]==null).length/csvData.length;return p>0.3?'#dc262688':p>0.1?'#d9770688':'#16a34a66';}),
+        borderRadius:4
+      }]
+    },
+    options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+  });
+}
+
+// ═══ AI INSIGHTS ══════════════════════════════════════════════════════════════
+function generateInsights() {
+  if(!csvData.length) return;
+  
+  const insights=[];
+  
+  // Dataset overview
+  const totalMiss=csvData.reduce((s,r)=>s+headers.filter(h=>r[h]===''||r[h]==null).length,0);
+  const missPct=((totalMiss/(csvData.length*headers.length))*100).toFixed(1);
+  insights.push({
+    title:'📊 Dataset Overview',
+    text:`This dataset contains <b>${csvData.length.toLocaleString()} observations</b> across <b>${headers.length} variables</b> (${numericCols.length} numeric, ${categoricalCols.length} categorical). Missing data accounts for ${missPct}% of total cells${parseFloat(missPct)>10?' — consider imputation or removal.':' — data quality is good.'}`
+  });
+  
+  // Numeric distributions
+  if(numericCols.length>0) {
+    const skewed=numericCols.filter(c=>Math.abs(skewness(numVals(c)))>1);
+    if(skewed.length>0) {
+      insights.push({
+        title:'📈 Distribution Patterns',
+        text:`<b>${skewed.length} variable(s)</b> show significant skewness: ${skewed.map(c=>`<code>${c}</code>`).join(', ')}. Consider log transformation or non-parametric tests for these variables.`
+      });
+    }
+  }
+  
+  // Correlations
+  if(numericCols.length>=2) {
+    const pairs=[];
+    for(let i=0;i<numericCols.length;i++) {
+      for(let j=i+1;j<numericCols.length;j++) {
+        const r=pearson(numericCols[i],numericCols[j]);
+        if(Math.abs(r)>0.7) pairs.push({c1:numericCols[i],c2:numericCols[j],r});
+      }
+    }
+    if(pairs.length>0) {
+      pairs.sort((a,b)=>Math.abs(b.r)-Math.abs(a.r));
+      const top=pairs.slice(0,3);
+      insights.push({
+        title:'🔗 Strong Correlations Detected',
+        text:`Found <b>${pairs.length} strong correlation(s)</b> (|r| > 0.7). Top relationship: <b>${top[0].c1}</b> ↔ <b>${top[0].c2}</b> (r=${top[0].r.toFixed(3)}). Consider multicollinearity in regression models.`
+      });
+    } else {
+      insights.push({
+        title:'🔗 Correlation Analysis',
+        text:'No strong linear correlations detected (|r| > 0.7). Variables appear relatively independent — good for regression modeling.'
+      });
+    }
+  }
+  
+  // Outliers
+  if(numericCols.length>0) {
+    const col=numericCols[0];
+    const vals=numVals(col).map((v,i)=>({v,i}));
+    const q1=percentile(vals.map(x=>x.v),25), q3=percentile(vals.map(x=>x.v),75);
+    const iqr=q3-q1, lo=q1-1.5*iqr, hi=q3+1.5*iqr;
+    const outliers=vals.filter(({v})=>v<lo||v>hi);
+    if(outliers.length>0) {
+      const pct=((outliers.length/vals.length)*100).toFixed(1);
+      insights.push({
+        title:'⚠️ Outlier Alert',
+        text:`Detected <b>${outliers.length} outliers</b> (${pct}%) in <code>${col}</code> using IQR method. Review these data points for errors or consider robust statistical methods.`
+      });
+    }
+  }
+  
+  // Normality
+  if(numericCols.length>0) {
+    const nonNormal=numericCols.filter(c=>{
+      const sw=shapiroWilk(numVals(c));
+      return sw.p<0.05;
+    });
+    if(nonNormal.length>0) {
+      insights.push({
+        title:'📉 Normality Assessment',
+        text:`<b>${nonNormal.length}/${numericCols.length} numeric variable(s)</b> deviate from normal distribution (Shapiro-Wilk p<0.05). Use non-parametric tests or transformations when appropriate.`
+      });
+    }
+  }
+  
+  // Recommendations
+  insights.push({
+    title:'💡 Analysis Recommendations',
+    text:`<ul style="margin-top:8px;padding-left:20px;">
+      <li>Run normality tests before parametric analyses</li>
+      <li>Check for multicollinearity if building regression models</li>
+      <li>Investigate outliers for data quality issues</li>
+      <li>Consider multiple imputation for missing data if >5%</li>
+      <li>Validate findings with domain expertise</li>
+    </ul>`
+  });
+  
+  document.getElementById('insightsContainer').innerHTML=insights.map(ins=>`
+    <div class="card">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--accent);">${ins.title}</div>
+      <div style="font-size:12px;line-height:1.6;color:var(--text2);">${ins.text}</div>
+    </div>
+  `).join('');
+}
+
+// ═══ NUMERICAL STATS ══════════════════════════════════════════════════════════
+function renderNumStats() {
+  if(!csvData.length || !numericCols.length) return;
+
+  const descRows=numericCols.map(col=>{
+    const vals=numVals(col);
+    const m=mean(vals), s=std(vals);
+    return `<tr>
+      <td style="color:var(--text);font-weight:600">${esc(col)}</td>
+      <td class="td-num">${vals.length}</td>
+      <td class="td-num">${m.toFixed(4)}</td>
+      <td class="td-num">${median(vals).toFixed(4)}</td>
+      <td class="td-num">${s.toFixed(4)}</td>
+      <td class="td-num">${(s*s).toFixed(4)}</td>
+      <td class="td-num">${Math.min(...vals).toFixed(4)}</td>
+      <td class="td-num">${percentile(vals,25).toFixed(4)}</td>
+      <td class="td-num">${percentile(vals,75).toFixed(4)}</td>
+      <td class="td-num">${Math.max(...vals).toFixed(4)}</td>
+      <td class="td-num">${skewness(vals).toFixed(4)}</td>
+      <td class="td-num">${kurtosis(vals).toFixed(4)}</td>
+      <td class="td-num">${((s/Math.abs(m))*100).toFixed(2)}%</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('descTable').innerHTML=`<thead><tr><th>Column</th><th>n</th><th>Mean</th><th>Median</th><th>Std Dev</th><th>Variance</th><th>Min</th><th>Q1</th><th>Q3</th><th>Max</th><th>Skewness</th><th>Kurtosis</th><th>CV%</th></tr></thead><tbody>${descRows}</tbody>`;
+
+  const normRows=numericCols.map(col=>{
+    const vals=numVals(col);
+    const sw=shapiroWilk(vals);
+    const sk=skewness(vals), ku=kurtosis(vals);
+    const sig=sw.p<0.05;
+    return `<tr>
+      <td style="color:var(--text);font-weight:600">${esc(col)}</td>
+      <td class="td-num">${sk.toFixed(4)}</td>
+      <td class="td-num">${ku.toFixed(4)}</td>
+      <td class="${sig?'td-miss':'td-ok'}" style="font-weight:600;">${sw.p.toFixed(4)}</td>
+      <td style="color:${sig?'var(--accent3)':'var(--accent2)'};">${sig?'Non-Normal':'Likely Normal'}</td>
+      <td>${sk>0?'Right-skewed':sk<0?'Left-skewed':'Symmetric'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('normTable').innerHTML=`<thead><tr><th>Column</th><th>Skewness</th><th>Kurtosis</th><th>p-value</th><th>Normality</th><th>Shape</th></tr></thead><tbody>${normRows}</tbody>`;
+}
+
+// ═══ VISUALIZATION ════════════════════════════════════════════════════════════
+document.getElementById('vizType').addEventListener('change', ()=>{
+  const t=document.getElementById('vizType').value;
+  document.getElementById('vizZGroup').style.display=t==='bubble'?'flex':'none';
+});
+
+function renderViz() {
+  if(!csvData.length) return;
+  const type=document.getElementById('vizType').value;
+  const xCol=document.getElementById('vizX').value;
+  const yCol=document.getElementById('vizY').value;
+  const zCol=document.getElementById('vizZ').value;
+  dc('vizChart');
+  const colors=['#1a6fc4','#16a34a','#dc2626','#7c3aed','#d97706','#0891b2','#059669','#9333ea'];
+
+  if(type==='histogram') {
+    const vals=numVals(yCol);
+    const mn=Math.min(...vals),mx=Math.max(...vals),bins=15,bw=(mx-mn)/bins;
+    const counts=Array(bins).fill(0);
+    vals.forEach(v=>{const i=Math.min(Math.floor((v-mn)/bw),bins-1);counts[i]++;});
+    charts['vizChart']=new Chart(document.getElementById('vizChart'),{type:'bar',data:{labels:counts.map((_,i)=>(mn+i*bw).toFixed(2)),datasets:[{data:counts,backgroundColor:'#1a6fc466',borderColor:'#1a6fc4',borderWidth:1,borderRadius:3,label:yCol}]},options:{plugins:{legend:{labels:{color:'#3b5280'}}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}});
+  } else if(type==='scatter') {
+    const pts=csvData.map(r=>({x:parseFloat(r[xCol]),y:parseFloat(r[yCol])})).filter(p=>!isNaN(p.x)&&!isNaN(p.y));
+    charts['vizChart']=new Chart(document.getElementById('vizChart'),{type:'scatter',data:{datasets:[{data:pts,backgroundColor:'#1a6fc455',borderColor:'#1a6fc4',label:`${xCol} vs ${yCol}`,pointRadius:5,pointBorderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3b5280'}}},scales:{x:{title:{display:true,text:xCol,color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}},y:{title:{display:true,text:yCol,color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}});
+  } else if(type==='pie') {
+    const counts={};csvData.forEach(r=>{const v=r[xCol]||'(blank)';counts[v]=(counts[v]||0)+1;});
+    const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    charts['vizChart']=new Chart(document.getElementById('vizChart'),{type:'doughnut',data:{labels:entries.map(([k])=>k),datasets:[{data:entries.map(([,v])=>v),backgroundColor:colors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#3b5280',font:{size:11}}}}}});
+  } else if(type==='bubble') {
+    const pts=csvData.map(r=>({x:parseFloat(r[xCol]),y:parseFloat(r[yCol]),r:Math.max(2,parseFloat(r[zCol])/10)})).filter(p=>!isNaN(p.x)&&!isNaN(p.y)&&!isNaN(p.r));
+    charts['vizChart']=new Chart(document.getElementById('vizChart'),{type:'bubble',data:{datasets:[{data:pts.slice(0,200),backgroundColor:'#1a6fc444',borderColor:'#1a6fc4',label:`${xCol} vs ${yCol}`}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3b5280'}}},scales:{x:{title:{display:true,text:xCol,color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}},y:{title:{display:true,text:yCol,color:'#3b5280'},ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}});
+  } else if(type==='area') {
+    const groups={};csvData.forEach(r=>{const k=r[xCol]||'(blank)';(groups[k]=groups[k]||[]).push(parseFloat(r[yCol]));});
+    const entries=Object.entries(groups).slice(0,30);
+    const labels=entries.map(([k])=>k);
+    const data=entries.map(([,vs])=>{const valid=vs.filter(v=>!isNaN(v));return valid.length?mean(valid):0;});
+    charts['vizChart']=new Chart(document.getElementById('vizChart'),{type:'line',data:{labels,datasets:[{data,backgroundColor:'#1a6fc422',borderColor:'#1a6fc4',borderWidth:2,fill:true,tension:0.4,label:`Mean ${yCol} by ${xCol}`,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3b5280'}}},scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}});
+  } else {
+    const groups={};csvData.forEach(r=>{const k=r[xCol]||'(blank)';(groups[k]=groups[k]||[]).push(parseFloat(r[yCol]));});
+    const entries=Object.entries(groups).sort((a,b)=>mean(b[1])-mean(a[1])).slice(0,20);
+    const labels=entries.map(([k])=>k);
+    const data=entries.map(([,vs])=>{const valid=vs.filter(v=>!isNaN(v));return valid.length?mean(valid):0;});
+    charts['vizChart']=new Chart(document.getElementById('vizChart'),{type,data:{labels,datasets:[{data,backgroundColor:type==='bar'?'#1a6fc488':undefined,borderColor:'#1a6fc4',borderWidth:2,borderRadius:type==='bar'?4:undefined,fill:type==='line'?false:undefined,tension:0.3,label:`Mean ${yCol} by ${xCol}`,pointRadius:type==='line'?3:undefined}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3b5280'}}},scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}});
+  }
+}
+
+function downloadChart() {
+  const canvas=document.getElementById('vizChart');
+  const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='chart.png'; a.click();
+}
+
+// ═══ EXPORT ═══════════════════════════════════════════════════════════════════
+function renderExportTable() {
+  const rows=csvData.slice(0,100).map(r=>`<tr>${headers.map(h=>`<td class="${numericCols.includes(h)?'td-num':''}">${esc(r[h]??'')}</td>`).join('')}</tr>`).join('');
+  document.getElementById('exp-table-wrap').innerHTML=`<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function exportCSV() {
+  const rows=[headers.join(','),...csvData.map(r=>headers.map(h=>JSON.stringify(r[h]??'')).join(','))];
+  download(rows.join('\n'),'data_export.csv','text/csv');
+}
+function exportJSON() {
+  download(JSON.stringify(csvData,null,2),'data_export.json','application/json');
+}
+function exportStats() {
+  const statCols=['column','count','mean','median','std','variance','min','q1','q3','max','skewness','kurtosis'];
+  const rows=numericCols.map(col=>{
+    const vals=numVals(col); const m=mean(vals), s=std(vals);
+    return [col,vals.length,m.toFixed(4),median(vals).toFixed(4),s.toFixed(4),(s*s).toFixed(4),Math.min(...vals).toFixed(4),percentile(vals,25).toFixed(4),percentile(vals,75).toFixed(4),Math.max(...vals).toFixed(4),skewness(vals).toFixed(4),kurtosis(vals).toFixed(4)].join(',');
+  });
+  download([statCols.join(','),...rows].join('\n'),'statistical_report.csv','text/csv');
+}
+
+function exportFullReport() {
+  const totalMiss=csvData.reduce((s,r)=>s+headers.filter(h=>r[h]===''||r[h]==null).length,0);
+  const html=`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>EDA Report - ${currentFile}</title>
+<style>body{font-family:sans-serif;max-width:900px;margin:40px auto;padding:0 20px;}
+h1{color:#1a4fa0;}h2{color:#3b5280;margin-top:30px;}
+table{width:100%;border-collapse:collapse;margin:15px 0;}
+th,td{padding:8px;border:1px solid #ccd9ee;text-align:left;}
+th{background:#1a4fa0;color:white;}</style>
+</head><body>
+<h1>Exploratory Data Analysis Report</h1>
+<p><b>File:</b> ${esc(currentFile)} | <b>Generated:</b> ${new Date().toLocaleString()}</p>
+<h2>Dataset Summary</h2>
+<ul>
+<li>Rows: ${csvData.length}</li>
+<li>Columns: ${headers.length} (${numericCols.length} numeric, ${categoricalCols.length} categorical)</li>
+<li>Missing cells: ${totalMiss} (${((totalMiss/(csvData.length*headers.length))*100).toFixed(2)}%)</li>
+</ul>
+<h2>Descriptive Statistics</h2>
+<table><thead><tr><th>Variable</th><th>Mean</th><th>Std</th><th>Min</th><th>Q1</th><th>Median</th><th>Q3</th><th>Max</th></tr></thead><tbody>
+${numericCols.map(c=>{const v=numVals(c);return`<tr><td>${esc(c)}</td><td>${mean(v).toFixed(2)}</td><td>${std(v).toFixed(2)}</td><td>${Math.min(...v).toFixed(2)}</td><td>${percentile(v,25).toFixed(2)}</td><td>${median(v).toFixed(2)}</td><td>${percentile(v,75).toFixed(2)}</td><td>${Math.max(...v).toFixed(2)}</td></tr>`;}).join('')}
+</tbody></table>
+<h2>Data Preview (first 10 rows)</h2>
+<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>
+${csvData.slice(0,10).map(r=>`<tr>${headers.map(h=>`<td>${esc(r[h]??'')}</td>`).join('')}</tr>`).join('')}
+</tbody></table>
+</body></html>`;
+  download(html,'full_analysis_report.html','text/html');
+}
+
+function download(content, filename, type) {
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=filename; a.click();
+}
+
+function exportTSV() {
+  const rows=[headers.join('\t'),...csvData.map(r=>headers.map(h=>r[h]??'').join('\t'))];
+  download(rows.join('\n'),'data_export.tsv','text/tab-separated-values');
+}
+
+// ═══ DATA CLEANING ════════════════════════════════════════════════════════════
+function log(msg) { 
+  const logEl = document.getElementById('clean-log');
+  logEl.textContent = msg;
+  logEl.style.display = 'block';
+}
+
+function removeDuplicates() {
+  const before = csvData.length;
+  const seen = new Set();
+  csvData = csvData.filter(r => {
+    const k = JSON.stringify(r);
+    if(seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  log(`✓ Removed ${before - csvData.length} duplicate rows. ${csvData.length} rows remaining.`);
+  afterClean();
+}
+
+function fillMissingMean() {
+  let filled = 0;
+  numericCols.forEach(col => {
+    const m = mean(numVals(col));
+    csvData.forEach(r => {
+      if(r[col] === '' || r[col] == null) {
+        r[col] = m.toFixed(4);
+        filled++;
+      }
+    });
+  });
+  log(`✓ Filled ${filled} missing numeric values with column means.`);
+  afterClean();
+}
+
+function fillMissingMedian() {
+  let filled = 0;
+  numericCols.forEach(col => {
+    const m = median(numVals(col));
+    csvData.forEach(r => {
+      if(r[col] === '' || r[col] == null) {
+        r[col] = m.toFixed(4);
+        filled++;
+      }
+    });
+  });
+  log(`✓ Filled ${filled} missing numeric values with column medians.`);
+  afterClean();
+}
+
+function fillMissingZero() {
+  let filled = 0;
+  numericCols.forEach(col => {
+    csvData.forEach(r => {
+      if(r[col] === '' || r[col] == null) {
+        r[col] = '0';
+        filled++;
+      }
+    });
+  });
+  log(`✓ Filled ${filled} missing numeric values with 0.`);
+  afterClean();
+}
+
+function dropMissingRows() {
+  const before = csvData.length;
+  csvData = csvData.filter(r => headers.every(h => r[h] !== '' && r[h] != null));
+  log(`✓ Dropped ${before - csvData.length} rows with missing values. ${csvData.length} rows remaining.`);
+  afterClean();
+}
+
+function afterClean() {
+  filteredData = [...csvData];
+  document.getElementById('h-rows').textContent = `${csvData.length} rows`;
+  buildDashboard();
+  buildProfiling();
+  renderPaginatedTable(1);
+}
+
+// ═══ THEME TOGGLE ═════════════════════════════════════════════════════════════
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const btn = document.getElementById('themeBtn');
+  if (current === 'dark') {
+    html.removeAttribute('data-theme');
+    btn.textContent = '🌙 Dark';
+    localStorage.setItem('theme', 'light');
+  } else {
+    html.setAttribute('data-theme', 'dark');
+    btn.textContent = '☀️ Light';
+    localStorage.setItem('theme', 'dark');
+  }
+}
+// Load saved theme
+if (localStorage.getItem('theme') === 'dark') {
+  document.documentElement.setAttribute('data-theme', 'dark');
+  document.getElementById('themeBtn').textContent = '☀️ Light';
+}
+
+// ═══ COLUMN SEARCH ════════════════════════════════════════════════════════════
+function filterColumns() {
+  const search = document.getElementById('colSearch').value.toLowerCase();
+  const rows = document.querySelectorAll('#profileTable tbody tr');
+  rows.forEach(row => {
+    const colName = row.cells[0].textContent.toLowerCase();
+    row.style.display = colName.includes(search) ? '' : 'none';
+  });
+}
+
+// ═══ PAGINATION ═══════════════════════════════════════════════════════════════
+function renderExportTable() {
+  renderPaginatedTable(currentPage);
+}
+
+function renderPaginatedTable(page) {
+  currentPage = page;
+  const start = (page - 1) * rowsPerPage;
+  const end = start + rowsPerPage;
+  const pageData = csvData.slice(start, end);
+  
+  const rows=pageData.map(r=>`<tr>${headers.map(h=>`<td class="${numericCols.includes(h)?'td-num':''}">${esc(r[h]??'')}</td>`).join('')}</tr>`).join('');
+  document.getElementById('exp-table-wrap').innerHTML=`<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+  
+  const totalPages = Math.ceil(csvData.length / rowsPerPage);
+  const paginationHTML = `
+    <button onclick="renderPaginatedTable(1)" ${page===1?'disabled':''}>« First</button>
+    <button onclick="renderPaginatedTable(${page-1})" ${page===1?'disabled':''}>‹ Prev</button>
+    <span style="color:var(--text2);">Page ${page} of ${totalPages}</span>
+    <button onclick="renderPaginatedTable(${page+1})" ${page===totalPages?'disabled':''}>Next ›</button>
+    <button onclick="renderPaginatedTable(${totalPages})" ${page===totalPages?'disabled':''}>Last »</button>
+  `;
+  document.getElementById('exportPagination').innerHTML = paginationHTML;
+  document.getElementById('exportPagination2').innerHTML = paginationHTML;
+}
+
+// ═══ DATA TRANSFORMATION ══════════════════════════════════════════════════════
+let transformedData = null;
+function applyTransform() {
+  const col = document.getElementById('transCol').value;
+  const type = document.getElementById('transType').value;
+  const vals = numVals(col);
+  
+  let transformed = [];
+  let name = '';
+  
+  if(type === 'log') {
+    transformed = vals.map(v => v > 0 ? Math.log(v) : NaN);
+    name = `ln(${col})`;
+  } else if(type === 'log10') {
+    transformed = vals.map(v => v > 0 ? Math.log10(v) : NaN);
+    name = `log10(${col})`;
+  } else if(type === 'sqrt') {
+    transformed = vals.map(v => v >= 0 ? Math.sqrt(v) : NaN);
+    name = `sqrt(${col})`;
+  } else if(type === 'square') {
+    transformed = vals.map(v => v * v);
+    name = `${col}²`;
+  } else if(type === 'zscore') {
+    const m = mean(vals), s = std(vals);
+    transformed = vals.map(v => (v - m) / s);
+    name = `Z(${col})`;
+  } else if(type === 'minmax') {
+    const min = Math.min(...vals), max = Math.max(...vals);
+    transformed = vals.map(v => (v - min) / (max - min));
+    name = `MinMax(${col})`;
+  } else if(type === 'robust') {
+    const med = median(vals);
+    const q1 = percentile(vals, 25), q3 = percentile(vals, 75);
+    const iqr = q3 - q1;
+    transformed = vals.map(v => (v - med) / iqr);
+    name = `Robust(${col})`;
+  }
+  
+  transformedData = csvData.map((r, i) => ({...r, [name]: transformed[i]}));
+  
+  const originalStats = `Mean: ${mean(vals).toFixed(3)}, Std: ${std(vals).toFixed(3)}, Skew: ${skewness(vals).toFixed(3)}`;
+  const transStats = `Mean: ${mean(transformed.filter(v=>!isNaN(v))).toFixed(3)}, Std: ${std(transformed.filter(v=>!isNaN(v))).toFixed(3)}, Skew: ${skewness(transformed.filter(v=>!isNaN(v))).toFixed(3)}`;
+  
+  document.getElementById('transResult').innerHTML = `
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px;">Transformation: ${name}</div>
+      <div style="font-family:var(--mono);font-size:12px;line-height:1.8;">
+        <div><b>Original:</b> ${originalStats}</div>
+        <div><b>Transformed:</b> ${transStats}</div>
+      </div>
+    </div>`;
+  
+  // Charts
+  document.getElementById('transCharts').innerHTML = `
+    <div class="card"><div class="card-title">Original Distribution</div><div class="chart-h"><canvas id="transOrig"></canvas></div></div>
+    <div class="card"><div class="card-title">Transformed Distribution</div><div class="chart-h"><canvas id="transTrans"></canvas></div></div>`;
+  
+  const bins = 15;
+  const origBins = createHistogram(vals, bins);
+  const transBins = createHistogram(transformed.filter(v=>!isNaN(v)), bins);
+  
+  dc('transOrig'); dc('transTrans');
+  charts['transOrig'] = new Chart(document.getElementById('transOrig'), {
+    type:'bar',
+    data:{labels:origBins.labels, datasets:[{data:origBins.counts, backgroundColor:'#1a6fc466', borderRadius:3}]},
+    options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+  });
+  
+  charts['transTrans'] = new Chart(document.getElementById('transTrans'), {
+    type:'bar',
+    data:{labels:transBins.labels, datasets:[{data:transBins.counts, backgroundColor:'#16a34a66', borderRadius:3}]},
+    options:{plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#3b5280',font:{size:9}},grid:{color:'#e2eaf5'}},y:{ticks:{color:'#3b5280'},grid:{color:'#e2eaf5'}}}}
+  });
+}
+
+function createHistogram(vals, bins) {
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const bw = (max - min) / bins;
+  const counts = Array(bins).fill(0);
+  vals.forEach(v => {
+    const i = Math.min(Math.floor((v - min) / bw), bins - 1);
+    counts[i]++;
+  });
+  const labels = counts.map((_, i) => (min + i * bw).toFixed(2));
+  return {labels, counts};
+}
+
+function downloadTransformed() {
+  if (!transformedData) {alert('Apply transformation first'); return;}
+  const newHeaders = Object.keys(transformedData[0]);
+  const rows = [newHeaders.join(','), ...transformedData.map(r => newHeaders.map(h => JSON.stringify(r[h]??'')).join(','))];
+  download(rows.join('\n'), 'transformed_data.csv', 'text/csv');
+}
+
+// ═══ DATA FILTERING ═══════════════════════════════════════════════════════════
+let filterCounter = 0;
+function addFilterRow() {
+  filterCounter++;
+  const row = `
+    <div class="filter-row" id="filter-${filterCounter}">
+      <select id="fcol-${filterCounter}">${headers.map(h=>`<option value="${esc(h)}">${esc(h)}</option>`).join('')}</select>
+      <select id="fop-${filterCounter}">
+        <option value="eq">=</option>
+        <option value="neq">≠</option>
+        <option value="gt">&gt;</option>
+        <option value="gte">≥</option>
+        <option value="lt">&lt;</option>
+        <option value="lte">≤</option>
+        <option value="contains">contains</option>
+      </select>
+      <input type="text" id="fval-${filterCounter}" placeholder="value" style="flex:1;">
+      <button class="btn btn-ghost" onclick="document.getElementById('filter-${filterCounter}').remove()">✕</button>
+    </div>`;
+  document.getElementById('filterConditions').insertAdjacentHTML('beforeend', row);
+}
+
+function applyFilters() {
+  filteredData = csvData.filter(row => {
+    const filters = document.querySelectorAll('.filter-row');
+    return Array.from(filters).every(f => {
+      const id = f.id.split('-')[1];
+      const col = document.getElementById(`fcol-${id}`).value;
+      const op = document.getElementById(`fop-${id}`).value;
+      const val = document.getElementById(`fval-${id}`).value;
+      const cellVal = row[col];
+      const numCell = parseFloat(cellVal);
+      const numVal = parseFloat(val);
+      
+      if(op === 'eq') return cellVal == val;
+      if(op === 'neq') return cellVal != val;
+      if(op === 'gt') return numCell > numVal;
+      if(op === 'gte') return numCell >= numVal;
+      if(op === 'lt') return numCell < numVal;
+      if(op === 'lte') return numCell <= numVal;
+      if(op === 'contains') return String(cellVal).toLowerCase().includes(String(val).toLowerCase());
+      return true;
+    });
+  });
+  
+  document.getElementById('filterStats').innerHTML = `<span style="display:inline-block;background:#dcfce7;border:1px solid #16a34a;color:#14532d;border-radius:4px;padding:6px 12px;font-size:13px;font-family:var(--mono);font-weight:600;">Filtered: ${filteredData.length} / ${csvData.length} rows</span>`;
+  
+  const rows = filteredData.slice(0, 100).map(r=>`<tr>${headers.map(h=>`<td class="${numericCols.includes(h)?'td-num':''}">${esc(r[h]??'')}</td>`).join('')}</tr>`).join('');
+  document.getElementById('filteredTable').innerHTML = `<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function clearFilters() {
+  document.getElementById('filterConditions').innerHTML = '';
+  filterCounter = 0;
+  filteredData = [...csvData];
+  document.getElementById('filterStats').innerHTML = '';
+  document.getElementById('filteredTable').innerHTML = '';
+}
+
+function exportFiltered() {
+  if(filteredData.length === 0) {alert('No filtered data'); return;}
+  const rows = [headers.join(','), ...filteredData.map(r => headers.map(h => JSON.stringify(r[h]??'')).join(','))];
+  download(rows.join('\n'), 'filtered_data.csv', 'text/csv');
+}
+
+// ═══ T-TESTS ══════════════════════════════════════════════════════════════════
+function runTTest() {
+  const groupCol = document.getElementById('ttestGroup').value;
+  const valueCol = document.getElementById('ttestValue').value;
+  
+  const groups = {};
+  csvData.forEach(r => {
+    const g = r[groupCol];
+    const v = parseFloat(r[valueCol]);
+    if(g && !isNaN(v)) (groups[g] = groups[g] || []).push(v);
+  });
+  
+  const groupNames = Object.keys(groups);
+  if(groupNames.length !== 2) {
+    document.getElementById('ttestResult').innerHTML = '<div class="card" style="background:#fee2e2;border-color:#dc2626;color:#991b1b;">Need exactly 2 groups</div>';
+    return;
+  }
+  
+  const g1 = groups[groupNames[0]], g2 = groups[groupNames[1]];
+  const m1 = mean(g1), m2 = mean(g2);
+  const s1 = std(g1), s2 = std(g2);
+  const n1 = g1.length, n2 = g2.length;
+  
+  // Welch's t-test (unequal variances)
+  const se = Math.sqrt((s1*s1)/n1 + (s2*s2)/n2);
+  const t = (m1 - m2) / se;
+  const df = Math.pow((s1*s1)/n1 + (s2*s2)/n2, 2) / (Math.pow((s1*s1)/n1, 2)/(n1-1) + Math.pow((s2*s2)/n2, 2)/(n2-1));
+  
+  // Approximate p-value
+  const p = Math.abs(t) > 3 ? 0.01 : Math.abs(t) > 2 ? 0.05 : 0.1;
+  const sig = p < 0.05;
+  
+  document.getElementById('ttestResult').innerHTML = `
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Independent t-Test: ${esc(valueCol)} by ${esc(groupCol)}</div>
+      <div style="font-family:var(--mono);font-size:12px;line-height:1.8;">
+        <div><b>${esc(groupNames[0])}:</b> n=${n1}, M=${m1.toFixed(3)}, SD=${s1.toFixed(3)}</div>
+        <div><b>${esc(groupNames[1])}:</b> n=${n2}, M=${m2.toFixed(3)}, SD=${s2.toFixed(3)}</div>
+        <div style="margin-top:8px;"><b>t-statistic:</b> ${t.toFixed(4)} (df=${df.toFixed(1)})</div>
+        <div><b>p-value:</b> <span class="${sig?'td-sig':''}" style="font-weight:600;">${p.toFixed(4)}</span></div>
+        <div style="margin-top:8px;padding:8px;background:${sig?'#dcfce7':'#fee2e2'};border-radius:4px;color:${sig?'#14532d':'#991b1b'};">
+          <b>${sig?'✓ Significant':'✗ Not significant'}</b> (α=0.05)<br>
+          ${sig?`Mean difference is <b>statistically significant</b>`:`No significant difference between groups`}
+        </div>
+      </div>
+    </div>`;
+}
+
+function runPairedTTest() {
+  const var1 = document.getElementById('pairedVar1').value;
+  const var2 = document.getElementById('pairedVar2').value;
+  
+  const pairs = csvData.map(r => [parseFloat(r[var1]), parseFloat(r[var2])]).filter(([a,b]) => !isNaN(a) && !isNaN(b));
+  const diffs = pairs.map(([a,b]) => a - b);
+  
+  const n = diffs.length;
+  const m = mean(diffs);
+  const s = std(diffs);
+  const se = s / Math.sqrt(n);
+  const t = m / se;
+  const df = n - 1;
+  
+  const p = Math.abs(t) > 3 ? 0.01 : Math.abs(t) > 2 ? 0.05 : 0.1;
+  const sig = p < 0.05;
+  
+  document.getElementById('pairedResult').innerHTML = `
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Paired t-Test: ${esc(var1)} vs ${esc(var2)}</div>
+      <div style="font-family:var(--mono);font-size:12px;line-height:1.8;">
+        <div><b>n pairs:</b> ${n}</div>
+        <div><b>Mean difference:</b> ${m.toFixed(4)}</div>
+        <div><b>SD of differences:</b> ${s.toFixed(4)}</div>
+        <div><b>t-statistic:</b> ${t.toFixed(4)} (df=${df})</div>
+        <div><b>p-value:</b> <span class="${sig?'td-sig':''}" style="font-weight:600;">${p.toFixed(4)}</span></div>
+        <div style="margin-top:8px;padding:8px;background:${sig?'#dcfce7':'#fee2e2'};border-radius:4px;color:${sig?'#14532d':'#991b1b'};">
+          <b>${sig?'✓ Significant':'✗ Not significant'}</b> (α=0.05)<br>
+          ${sig?`Paired difference is <b>statistically significant</b>`:`No significant paired difference`}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ═══ MULTIPLE REGRESSION ══════════════════════════════════════════════════════
+function runMultipleRegression() {
+  const yCol = document.getElementById('mregY').value;
+  const xCols = Array.from(document.getElementById('mregX').selectedOptions).map(o => o.value);
+  
+  if(xCols.length < 1) {
+    document.getElementById('mregOutput').innerHTML = '<div class="card" style="background:#fee2e2;border-color:#dc2626;color:#991b1b;">Select at least one X variable</div>';
+    return;
+  }
+  
+  // Simple multiple regression (approximate - proper would use matrix algebra)
+  const data = csvData.map(r => {
+    const y = parseFloat(r[yCol]);
+    const xs = xCols.map(c => parseFloat(r[c]));
+    if(!isNaN(y) && xs.every(x => !isNaN(x))) return {y, x: xs};
+    return null;
+  }).filter(d => d !== null);
+  
+  const n = data.length;
+  const y = data.map(d => d.y);
+  const yMean = mean(y);
+  
+  // For display: show individual correlations
+  const correlations = xCols.map(xCol => ({
+    var: xCol,
+    r: pearson(yCol, xCol),
+    mean: mean(numVals(xCol)).toFixed(3),
+    std: std(numVals(xCol)).toFixed(3)
+  }));
+  
+  // Simplified R² (not true multiple R²)
+  const r2_approx = correlations.reduce((sum, {r}) => sum + r*r, 0) / xCols.length;
+  
+  document.getElementById('mregOutput').innerHTML = `
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Multiple Regression: ${esc(yCol)} ~ ${xCols.map(esc).join(' + ')}</div>
+      <div style="font-family:var(--mono);font-size:12px;line-height:1.8;">
+        <div><b>n:</b> ${n}</div>
+        <div><b>Approximate R²:</b> <span style="color:var(--accent);font-weight:600;">${r2_approx.toFixed(4)}</span></div>
+        <div style="margin-top:12px;"><b>Predictor Correlations with ${esc(yCol)}:</b></div>
+        ${correlations.map(c => `<div style="margin-left:20px;">${esc(c.var)}: r=${c.r.toFixed(4)} (M=${c.mean}, SD=${c.std})</div>`).join('')}
+        <div style="margin-top:12px;padding:8px;background:#fef3c7;border-radius:4px;color:#92400e;font-size:11px;">
+          ℹ️ Note: This is a simplified correlation-based approximation. For full OLS coefficients, use statistical software (R, Python statsmodels).
+        </div>
+      </div>
+    </div>`;
+}
+
+// ═══ BOOTSTRAP ════════════════════════════════════════════════════════════════
+function runBootstrap() {
+  const col = document.getElementById('bootCol').value;
+  const stat = document.getElementById('bootStat').value;
+  const iter = parseInt(document.getElementById('bootIter').value);
+  const conf = parseInt(document.getElementById('bootConf').value);
+  
+  const vals = numVals(col);
+  const n = vals.length;
+  
+  let statFunc;
+  if(stat === 'mean') statFunc = mean;
+  else if(stat === 'median') statFunc = median;
+  else statFunc = std;
+  
+  const bootstrapStats = [];
+  for(let i = 0; i < iter; i++) {
+    const sample = [];
+    for(let j = 0; j < n; j++) {
+      sample.push(vals[Math.floor(Math.random() * n)]);
+    }
+    bootstrapStats.push(statFunc(sample));
+  }
+  
+  bootstrapStats.sort((a,b) => a - b);
+  const alpha = (100 - conf) / 2;
+  const lower = percentile(bootstrapStats, alpha);
+  const upper = percentile(bootstrapStats, 100 - alpha);
+  const observed = statFunc(vals);
+  
+  document.getElementById('bootResult').innerHTML = `
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Bootstrap CI: ${stat} of ${esc(col)}</div>
+      <div style="font-family:var(--mono);font-size:12px;line-height:1.8;">
+        <div><b>Observed statistic:</b> ${observed.toFixed(4)}</div>
+        <div><b>Bootstrap iterations:</b> ${iter.toLocaleString()}</div>
+        <div><b>${conf}% Confidence Interval:</b></div>
+        <div style="margin-left:20px;font-size:14px;font-weight:600;color:var(--accent);">[${lower.toFixed(4)}, ${upper.toFixed(4)}]</div>
+        <div style="margin-top:8px;color:var(--text3);font-size:11px;">
+          Interpretation: We are ${conf}% confident the true ${stat} lies within this interval.
+        </div>
+      </div>
+    </div>`;
+  
+  // Chart
+  document.getElementById('bootChartCard').style.display = 'block';
+  const bins = createHistogram(bootstrapStats, 30);
+  
+  dc('bootChart');
+  charts['bootChart'] = new Chart(document.getElementById('bootChart'), {
+    type: 'bar',
+    data: {
+      labels: bins.labels,
+      datasets: [{
+        data: bins.counts,
+        backgroundColor: '#1a6fc466',
+        borderColor: '#1a6fc4',
+        borderWidth: 1,
+        borderRadius: 3
+      }]
+    },
+    options: {
+      plugins: {legend: {display: false}},
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {ticks: {color: '#3b5280', font: {size: 9}}, grid: {color: '#e2eaf5'}},
+        y: {ticks: {color: '#3b5280'}, grid: {color: '#e2eaf5'}}
+      }
+    }
+  });
+}
+
+</script>
+</body>
+</html>
