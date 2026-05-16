@@ -371,24 +371,8 @@ git push origin feature/your-feature-name
 
 If you use EDA-Pro in your research, please cite:
 
-```bibtex
-@article{edapro2024,
-  title={EDA-Pro: A Web-Based Automated Exploratory Numerical Data Analysis System},
-  author={Your Name and Co-authors},
-  journal={Journal Name},
-  year={2024},
-  volume={X},
-  pages={XX-XX},
-  doi={XX.XXXX/XXXXX}
-}
-```
+N.Z. Kaifa, B. M. Salahuddin, S.M.A. Kabir, M. Shihab, M.H. Rahman, M.M. Reza, and M. Naderuzzaman “EDA-Pro: A Web-Based Automated Exploratory Numerical Data Analysis System”, Open Access Journal on Engineering Applications (OAJEA), Volume No. 01, Issue No. 02, Page 60-85, May, 2026. https://doi.org/10.64886/oajea.0102.007
 
-Or in APA format:
-```
-Your Name et al. (2024). EDA-Pro: A Web-Based Automated Exploratory 
-Numerical Data Analysis System. Journal Name, X(X), XX-XX. 
-https://doi.org/XX.XXXX/XXXXX
-```
 
 ---
 
