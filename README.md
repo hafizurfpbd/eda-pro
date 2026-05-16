@@ -417,10 +417,9 @@ SOFTWARE.
 
 ## 📞 Contact & Support
 
-- **Issues**: [GitHub Issues](issues)
-- **Discussions**: [GitHub Discussions](discussions)
-- **Email**: your.email@domain.com
-- **Twitter**: [@yourusername](https://twitter.com/yourusername)
+
+- **Email**: hafizurfpbd@gmail.com
+- 
 
 ---
 
